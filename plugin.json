@@ -1,0 +1,19 @@
+{
+  "name": "odm",
+  "version": "1.0",
+  "description": {
+    "en": "Object Document Mapper",
+    "ru": "Object Document Mapper",
+    "uk": "Object Document Mapper"
+  },
+  "url": "https://github.com/pytsite/plugin-odm",
+  "author": {
+    "name": "Alexander Shepetko",
+    "email": "a@shepetko.com",
+    "url": "https://shepetko.com"
+  },
+  "requires": {
+    "packages": [],
+    "plugins": []
+  }
+}
