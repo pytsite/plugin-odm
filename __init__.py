@@ -26,7 +26,7 @@ def _init():
     console.register_command(_console_command.Reindex())
 
     # Event listeners
-    events.listen('pytsite.db.restore', _eh.db_restore)
+    events.listen('pytsite.mongodb@restore', _eh.db_restore)
 
 
 _init()
