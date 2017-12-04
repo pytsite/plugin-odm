@@ -1,7 +1,7 @@
 """PytSite ODM Plugin
 """
 from pytsite import cache as _cache, reg as _reg
-_cache.create_pool('odm.entities', _reg.get('odm.cache.driver', 'redis'))
+_cache.create_pool('odm.entities')
 
 # Public API
 from . import _field as field, _validation as validation, _error as error, _geo as geo, _model as model

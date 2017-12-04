@@ -3,14 +3,14 @@
 from typing import Union as _Union, Iterable as _Iterable, Optional as _Optional
 from bson.dbref import DBRef as _DBRef
 from bson.objectid import ObjectId as _ObjectId
-from pytsite import mongodb as _db, util as _util, events as _events, reg as _reg, cache as _cache
+from pytsite import mongodb as _db, util as _util, events as _events, cache as _cache
 from . import _model, _error, _finder
 
 __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-_CACHE_DRIVER = _reg.get('odm.cache.driver', 'redis')
+
 _ENTITIES_CACHE = _cache.get_pool('odm.entities')
 _MODELS = {}
 
@@ -30,7 +30,7 @@ def register_model(model: str, cls: _Union[str, type], replace: bool = False):
 
     # Create finder cache pool for each newly registered model
     if not replace:
-        _cache.create_pool('odm.finder.' + model, _CACHE_DRIVER)
+        _cache.create_pool('odm.finder.' + model)
 
     _MODELS[model] = cls
 
