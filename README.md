@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.1.2 (2017-12-07)
+
+Fixed init code.
+
+
 ### 1.1.1 (2017-12-04)
 
 Support for caching subsystem changes of PytSite-6.1.

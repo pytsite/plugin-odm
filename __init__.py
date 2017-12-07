@@ -1,23 +1,26 @@
 """PytSite ODM Plugin
 """
-from pytsite import cache as _cache, reg as _reg
-_cache.create_pool('odm.entities')
+from pytsite import plugman as _plugman
 
 # Public API
-from . import _field as field, _validation as validation, _error as error, _geo as geo, _model as model
-from ._model import I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
-from ._finder import Finder, Result as FinderResult
-from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
-    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache
+if _plugman.is_installed(__name__):
+    # Public API
+    from . import _field as field, _validation as validation, _error as error, _geo as geo, _model as model
+    from ._model import I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
+    from ._finder import Finder, Result as FinderResult
+    from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
+        resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache
 
 __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-def _init():
-    from pytsite import console, lang, events
+def plugin_load():
+    from pytsite import console, lang, events, cache
     from . import _console_command, _eh
+
+    cache.create_pool('odm.entities')
 
     # Resources
     lang.register_package(__name__)
@@ -27,6 +30,3 @@ def _init():
 
     # Event listeners
     events.listen('pytsite.mongodb@restore', _eh.db_restore)
-
-
-_init()
