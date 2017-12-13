@@ -20,17 +20,17 @@ if _plugman.is_installed(__name__):
         resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache
 
 
-    def plugin_load():
-        """Plugman hook
-        """
-        from pytsite import console, lang, events
-        from . import _console_command, _eh
+def plugin_load():
+    """Plugman hook
+    """
+    from pytsite import console, lang, events
+    from . import _console_command, _eh
 
-        # Resources
-        lang.register_package(__name__)
+    # Resources
+    lang.register_package(__name__)
 
-        # Console commands
-        console.register_command(_console_command.Reindex())
+    # Console commands
+    console.register_command(_console_command.Reindex())
 
-        # Event listeners
-        events.listen('pytsite.mongodb@restore', _eh.db_restore)
+    # Event listeners
+    events.listen('pytsite.mongodb@restore', _eh.db_restore)

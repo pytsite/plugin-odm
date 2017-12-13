@@ -82,7 +82,7 @@ class Result:
 
 
 class Finder:
-    def __init__(self, model: str, cache_pool: _cache.driver.Abstract):
+    def __init__(self, model: str, cache_pool: _cache.Pool):
         """Init.
         """
         self._model = model

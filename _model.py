@@ -58,13 +58,13 @@ class Entity(_ABC):
 
         # Delegate fields setup process to the hook method
         self._setup_fields()
-        _events.fire('odm.model.setup_fields', entity=self)
-        _events.fire('odm.model.{}.setup_fields'.format(model), entity=self)
+        _events.fire('odm@model.setup_fields', entity=self)
+        _events.fire('odm@model.{}.setup_fields'.format(model), entity=self)
 
         # Delegate indexes setup process to the hook method
         self._setup_indexes()
-        _events.fire('odm.model.setup_indexes', entity=self)
-        _events.fire('odm.model.{}.setup_indexes'.format(model), entity=self)
+        _events.fire('odm@model.setup_indexes', entity=self)
+        _events.fire('odm@model.{}.setup_indexes'.format(model), entity=self)
 
         if obj_id:
             # Set entity's ID
@@ -485,8 +485,8 @@ class Entity(_ABC):
         # Pre-save hook
         if kwargs.get('pre_hooks', True):
             self._pre_save()
-            _events.fire('odm.entity.pre_save', entity=self)
-            _events.fire('odm.entity.pre_save.{}'.format(self._model), entity=self)
+            _events.fire('odm@entity.pre_save', entity=self)
+            _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
 
         # Update timestamp
         if kwargs.get('update_timestamp', True):
@@ -518,8 +518,8 @@ class Entity(_ABC):
         # After-save hook
         if kwargs.get('after_hooks', True):
             self._after_save(first_save, **kwargs)
-            _events.fire('odm.entity.save', entity=self, first_save=first_save)
-            _events.fire('odm.entity.save.{}'.format(self._model), entity=self, first_save=first_save)
+            _events.fire('odm@entity.save', entity=self, first_save=first_save)
+            _events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
 
         # Saved entity is not 'modified'
         self._is_modified = False
@@ -558,8 +558,8 @@ class Entity(_ABC):
         self._is_being_deleted = True
 
         # Pre delete events and hook
-        _events.fire('odm.entity.pre_delete', entity=self)
-        _events.fire('odm.entity.pre_delete.{}'.format(self._model), entity=self)
+        _events.fire('odm@entity.pre_delete', entity=self)
+        _events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
         self._pre_delete(**kwargs)
 
         # Notify each field about entity deletion
@@ -587,8 +587,8 @@ class Entity(_ABC):
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
         self._after_delete(**kwargs)
-        _events.fire('odm.entity.delete', entity=self)
-        _events.fire('odm.entity.delete.{}'.format(self._model), entity=self)
+        _events.fire('odm@entity.delete', entity=self)
+        _events.fire('odm@entity.delete.{}'.format(self._model), entity=self)
 
         self._is_deleted = True
         self._is_being_deleted = False

@@ -35,7 +35,7 @@ def register_model(model: str, cls: _Union[str, type], replace: bool = False):
     _MODELS[model] = cls
 
     cls.on_register(model)
-    _events.fire('odm.register', model=model, cls=cls, replace=replace)
+    _events.fire('odm@register', model=model, cls=cls, replace=replace)
 
     # Automatically create indices on new collections
     mock = dispense(model)
@@ -171,4 +171,4 @@ def clear_finder_cache(model: str):
     """Get finder cache pool
     """
     _cache.get_pool('odm.finder.' + model).clear()
-    _events.fire('odm.finder_cache.clear', model=model)
+    _events.fire('odm@finder_cache.clear', model=model)

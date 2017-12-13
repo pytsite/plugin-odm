@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.2 (2017-12-13)
+
+Support for PytSite-7.0.
+
+
 ### 1.1.3 (2017-12-08)
 
 Init code fixed.
