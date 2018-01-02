@@ -4,7 +4,7 @@
 ## Changelog
 
 
-### 1.3 (2018-02-02)
+### 1.3 (2018-01-02)
 
 Events names refactoring.
 
