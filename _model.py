@@ -59,12 +59,12 @@ class Entity(_ABC):
         # Delegate fields setup process to the hook method
         self._setup_fields()
         _events.fire('odm@model.setup_fields', entity=self)
-        _events.fire('odm@model.{}.setup_fields'.format(model), entity=self)
+        _events.fire('odm@model.setup_fields.{}'.format(model), entity=self)
 
         # Delegate indexes setup process to the hook method
         self._setup_indexes()
         _events.fire('odm@model.setup_indexes', entity=self)
-        _events.fire('odm@model.{}.setup_indexes'.format(model), entity=self)
+        _events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
 
         if obj_id:
             # Set entity's ID
