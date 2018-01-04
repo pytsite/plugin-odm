@@ -10,7 +10,8 @@ if _plugman.is_installed(__name__):
     from pytsite import cache as _cache
 
     # This cache pool MUST be created before any imports
-    _cache.create_pool('odm.entities')
+    if not _cache.has_pool('odm.entities'):
+        _cache.create_pool('odm.entities')
 
     # Public API
     from . import _field as field, _validation as validation, _error as error, _geo as geo, _model as model

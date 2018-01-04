@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.3.1 (2018-01-04)
+
+Entities cache initialization fixed.
+
+
 ### 1.3 (2018-01-02)
 
 Events names refactoring.
