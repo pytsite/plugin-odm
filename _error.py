@@ -5,19 +5,39 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-class ModelAlreadyRegistered(Exception):
+class Error(Exception):
     pass
 
 
-class ModelNotRegistered(Exception):
+class ModelAlreadyRegistered(Error):
     pass
 
 
-class ReferenceNotFound(Exception):
-    pass
+class ModelNotRegistered(Error):
+    def __init__(self, model: str):
+        self._model = model
+
+    def __str__(self) -> str:
+        return "ODM model '{}' is not registered".format(self._model)
 
 
-class EntityNotFound(Exception):
+class UnknownCollection(Error):
+    def __init__(self, collection: str):
+        self._collection = collection
+
+    def __str__(self) -> str:
+        return "There is no model registered for collection '{}'".format(self._collection)
+
+
+class ReferencedDocumentNotFound(Error):
+    def __init__(self, ref):
+        self._ref = ref
+
+    def __str__(self) -> str:
+        return "Referenced document '{}' is not found in the database".format(self._ref)
+
+
+class EntityNotFound(Error):
     def __init__(self, model: str, eid: str):
         self._model = model
         self._eid = eid
@@ -34,11 +54,15 @@ class EntityNotFound(Exception):
         return "Entity '{}:{}' is not found in database".format(self._model, self._eid)
 
 
-class EntityNotStored(Exception):
-    pass
+class EntityNotStored(Error):
+    def __init__(self, model: str):
+        self._model = model
+
+    def __str__(self) -> str:
+        return "Entity of model '{}' must be stored before you can get its reference".format(self._model)
 
 
-class FieldNotDefined(Exception):
+class FieldNotDefined(Error):
     def __init__(self, model: str, field_name: str):
         super().__init__()
 
@@ -49,17 +73,17 @@ class FieldNotDefined(Exception):
         return "Field '{}' is not defined in model '{}'".format(self._field_name, self._model)
 
 
-class EntityDeleted(Exception):
+class EntityDeleted(Error):
     pass
 
 
-class EntityNotLocked(Exception):
+class EntityNotLocked(Error):
     pass
 
 
-class FieldEmpty(Exception):
+class FieldEmpty(Error):
     pass
 
 
-class NoCachedData(Exception):
+class NoCachedData(Error):
     pass

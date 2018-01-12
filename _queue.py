@@ -1,13 +1,13 @@
 """PytSite ODM Plugin Queue
 """
 
-from pymongo import errors as _pymonog_errors
-from bson import errors as _bson_errors
-from pytsite import mongodb as _db, queue as _queue, logger as _logger, cache as _cache, reg as _reg
-
 __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
+
+from pymongo import errors as _pymonog_errors
+from bson import errors as _bson_errors
+from pytsite import mongodb as _db, queue as _queue, logger as _logger, cache as _cache, reg as _reg
 
 _QUEUE = _queue.Queue('odm')
 _ENTITIES_CACHE = _cache.get_pool('odm.entities')
@@ -31,7 +31,7 @@ def _entity_save(args: dict):
             collection.replace_one({'_id': fields_data['_id']}, fields_data)
 
         # Update cache
-        _ENTITIES_CACHE.put('{}.{}'.format(args['model'], fields_data['_id']), fields_data, _CACHE_TTL)
+        _ENTITIES_CACHE.put('{}.{}'.format(fields_data['_model'], fields_data['_id']), fields_data, _CACHE_TTL)
 
     except (_bson_errors.BSONError, _pymonog_errors.PyMongoError) as e:
         _logger.error(e)

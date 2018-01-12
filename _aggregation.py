@@ -1,7 +1,7 @@
 """PytSite ODM Plugin Aggregation
 """
 
-from typing import Any as _Any
+from typing import Any as _Any, List as _List, Dict as _Dict, Union as _Union
 from . import _api, _query
 
 __author__ = 'Alexander Shepetko'
@@ -30,7 +30,7 @@ class Aggregator:
         q = _query.Query(self._mock)
         q.add_criteria('$and', field_name, comparison_op, arg)
 
-        self._pipeline.append(('match', q))
+        self._pipeline.append(('$match', q.compile()))
 
         return self
 
@@ -39,7 +39,7 @@ class Aggregator:
 
         https://docs.mongodb.com/manual/reference/operator/aggregation/group/
         """
-        self._pipeline.append(('group', expression))
+        self._pipeline.append(('$group', expression))
 
         return self
 
@@ -48,7 +48,30 @@ class Aggregator:
 
         https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/
         """
-        self._pipeline.append(('lookup', (foreign_model, local_field, foreign_field, as_field)))
+        self._pipeline.append(('$lookup', {
+            'from': _api.get_model_collection(foreign_model).name,
+            'localField': local_field,
+            'foreignField': foreign_field,
+            'as': as_field,
+        }))
+
+        return self
+
+    def sort(self, fields: _Dict[str, _Union[int, _Dict[str, str]]]):
+        """Add a sort stage
+
+        https://docs.mongodb.com/manual/reference/operator/aggregation/sort/
+        """
+        self._pipeline.append(('$sort', fields))
+
+        return self
+
+    def limit(self, limit: int):
+        """Add a limit stage
+
+        https://docs.mongodb.com/manual/reference/operator/aggregation/limit/
+        """
+        self._pipeline.append(('$limit', limit))
 
         return self
 
@@ -58,29 +81,11 @@ class Aggregator:
         r = []
 
         for stage in self._pipeline:
-            if stage[0] == 'match':
-                r.append({
-                    '$match': stage[1].compile(),
-                })
-
-            elif stage[0] == 'group':
-                r.append({
-                    '$group': stage[1],
-                })
-
-            elif stage[0] == 'lookup':
-                r.append({
-                    '$lookup': {
-                        'from': stage[1][0],
-                        'localField': stage[1][1],
-                        'foreignField': stage[1][2],
-                        'as': stage[1][3],
-                    }
-                })
+            r.append({stage[0]: stage[1]})
 
         return r
 
-    def get(self) -> list:
+    def get(self) -> _List[_Dict]:
         """Perform aggregation operation.
         """
         return self._mock.collection.aggregate(self._compile())

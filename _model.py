@@ -39,7 +39,6 @@ class Entity(_ABC):
                 self._collection_name = model + 's'
 
         self._model = model
-        self._id = None  # type: _ObjectId
         self._is_new = True
         self._is_modified = True
         self._is_being_deleted = False
@@ -50,8 +49,11 @@ class Entity(_ABC):
         self._fields = _OrderedDict()  # type: _Dict[str, _field.Abstract]
 
         # Define 'system' fields
-        self.define_field(_field.Ref('_parent', model=model))
-        self.define_field(_field.RefsList('_children', model=model))
+        self.define_field(_field.ObjectId('_id', required=True))
+        self.define_field(_field.String('_ref', required=True))
+        self.define_field(_field.String('_model', required=True, default=self._model))
+        self.define_field(_field.ManualRef('_parent', model=model))
+        self.define_field(_field.ManualRefsList('_children', model=model))
         self.define_field(_field.Integer('_depth', required=True, default=0))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
@@ -66,23 +68,17 @@ class Entity(_ABC):
         _events.fire('odm@model.setup_indexes', entity=self)
         _events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
 
+        # Load fields data from database or cache
         if obj_id:
-            # Set entity's ID
-            self._id = _ObjectId(obj_id) if isinstance(obj_id, str) else obj_id
-
-            # Loading fields data from database or cache
-            self._load_fields_data(obj_id)
+            self._load_fields_data(_ObjectId(obj_id) if isinstance(obj_id, str) else obj_id)
 
     @classmethod
     def on_register(cls, model: str):
         pass
 
-    def _load_fields_data(self, eid: _Union[str, _ObjectId]):
+    def _load_fields_data(self, eid: _ObjectId):
         """Load fields data from the database
         """
-        if isinstance(eid, str):
-            eid = _ObjectId(eid)
-
         cache_key = '{}.{}'.format(self._model, eid)
 
         # Try to load entity data from cache
@@ -100,6 +96,10 @@ class Entity(_ABC):
 
         # Fill fields with values from loaded data
         for f_name, f_value in data.items():
+            # Model should not be overwritten
+            if f_name == '_model':
+                continue
+
             try:
                 field = self.get_field(f_name)
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
@@ -107,6 +107,10 @@ class Entity(_ABC):
             except _error.FieldNotDefined:
                 # Fields definition may be removed from version to version, so just ignore this situation
                 pass
+
+        # On versions prior to 1.4 field '_ref' didn't exist, so we need to check it
+        if not self.f_get('_ref'):
+            self.f_set('_ref', '{}:{}'.format(self.model, self.id))
 
         # Of course, loaded entity cannot be 'new' and 'modified'
         self._is_new = False
@@ -207,7 +211,7 @@ class Entity(_ABC):
         """Raise an exception if the entity has 'deleted' state.
         """
         if self._is_deleted:
-            raise _error.EntityDeleted("Entity '{}' has been deleted.".format(self.ref_str))
+            raise _error.EntityDeleted("Entity '{}' has been deleted.".format(self.manual_ref))
 
     def has_field(self, field_name: str) -> bool:
         """Check if the entity has a field.
@@ -238,7 +242,7 @@ class Entity(_ABC):
     def id(self) -> _Union[_ObjectId, None]:
         """Get entity ID.
         """
-        return self._id
+        return self.f_get('_id')
 
     @property
     def ref(self) -> _DBRef:
@@ -247,18 +251,16 @@ class Entity(_ABC):
         self._check_is_not_deleted()
 
         if self._is_new:
-            raise _error.EntityNotStored("Entity of model '{}' must be stored before you can get its ref."
-                                         .format(self._model))
+            raise _error.EntityNotStored(self._model)
 
-        return _DBRef(self.collection.name, self._id)
+        return _DBRef(self.collection.name, self.id)
 
     @property
-    def ref_str(self) -> str:
-        if not self._id:
-            raise _error.EntityNotStored("Entity of model '{}' must be stored before you can get its ref."
-                                         .format(self._model))
+    def manual_ref(self) -> str:
+        if not self.id:
+            raise _error.EntityNotStored(self._model)
 
-        return '{}:{}'.format(self._model, self._id)
+        return self.f_get('_ref')
 
     @property
     def model(self) -> str:
@@ -336,6 +338,14 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+
+        return self
+
+    def f_set_multiple(self, data: dict):
+        """Set multiple fields's values
+        """
+        for f_name, f_val in data.items():
+            self.f_set(f_name, f_val)
 
         return self
 
@@ -479,7 +489,7 @@ class Entity(_ABC):
         """Save the entity.
         """
         # Don't save entity if it wasn't changed
-        if not self._is_modified:
+        if not (self._is_modified or kwargs.get('force')):
             return self
 
         # Pre-save hook
@@ -492,25 +502,22 @@ class Entity(_ABC):
         if kwargs.get('update_timestamp', True):
             self.f_set('_modified', _datetime.now())
 
-        # Getting storable data of each field
-        fields_data = self.as_storable()
-
-        # Create object's ID
         if self._is_new:
-            fields_data['_id'] = _ObjectId()
+            # Create object's ID
+            oid = _ObjectId()
+            self.f_set('_id', oid)
+            self.f_set('_ref', '{}:{}'.format(self.model, oid))
 
         # Save into storage
         _queue.put('entity_save', {
             'is_new': self._is_new,
-            'model': self._model,
             'collection_name': self._collection_name,
-            'fields_data': fields_data,
+            'fields_data': self.as_storable(),
         }).execute()
 
         # Saved entity cannot be 'new'
         if self._is_new:
             first_save = True
-            self._id = fields_data['_id']
             self._is_new = False
         else:
             first_save = False
@@ -573,7 +580,7 @@ class Entity(_ABC):
         _queue.put('entity_delete', {
             'model': self._model,
             'collection_name': self._collection_name,
-            '_id': self._id,
+            '_id': self.id,
         }).execute()
 
         # Clear finder cache
@@ -608,10 +615,7 @@ class Entity(_ABC):
     def as_storable(self, check_required_fields: bool = True) -> dict:
         """Get storable representation of the entity
         """
-        r = {
-            '_id': self._id,
-            '_model': self._model,
-        }
+        r = {}
 
         for f_name, f in self.fields.items():
             # Virtual fields don't store values in the database
@@ -622,7 +626,7 @@ class Entity(_ABC):
             if check_required_fields and f.required and f.is_empty:
                 raise _error.FieldEmpty("Value of the field '{}.{}' cannot be empty".format(self._model, f_name))
 
-            r[f_name] = f._value
+            r[f_name] = f.get_raw_val()
 
         return r
 
@@ -630,7 +634,7 @@ class Entity(_ABC):
         """Get JSONable dictionary representation of the entity.
         """
         return {
-            'uid': str(self._id),
+            'uid': str(self.id),
         }
 
     @classmethod
@@ -665,7 +669,7 @@ class Entity(_ABC):
     def __str__(self):
         """__str__ overloading.
         """
-        return self.ref_str
+        return self.manual_ref
 
     def __eq__(self, other) -> bool:
         """__eq__ overloading.
