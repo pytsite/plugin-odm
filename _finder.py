@@ -151,7 +151,7 @@ class Finder:
         self._query.remove_field(logical_op, field_name)
 
         if field_name in self._cache_key[logical_op]:
-            del self._cache_key[logical_op]
+            del self._cache_key[logical_op][field_name]
 
         return self
 

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.2 (2018-01-13)
+
+Finder cache management issue fixed.
+
+
 ### 1.4.1 (2018-01-13)
 
 Registry key names fixed.
