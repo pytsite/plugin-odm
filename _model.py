@@ -17,7 +17,7 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 _CACHE_POOL = _cache.get_pool('odm.entities')
-_CACHE_TTL = _reg.get('odm.cache.ttl')
+_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
 
 
 class Entity(_ABC):

@@ -11,7 +11,7 @@ from pytsite import mongodb as _db, queue as _queue, logger as _logger, cache as
 
 _QUEUE = _queue.Queue('odm')
 _ENTITIES_CACHE = _cache.get_pool('odm.entities')
-_CACHE_TTL = _reg.get('odm.cache.ttl')
+_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
 
 
 def _entity_save(args: dict):

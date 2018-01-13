@@ -10,8 +10,8 @@ __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-_DBG = _reg.get('odm.debug.finder')
-_DEFAULT_CACHE_TTL = _reg.get('odm.cache.ttl', 86400)  # 24 hours
+_DBG = _reg.get('odm.debug_finder')
+_DEFAULT_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)  # 24 hours
 
 
 class Result:

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.1 (2018-01-13)
+
+Registry key names fixed.
+
+
 ### 1.4 (2018-01-12)
 
 - New fields added: `ObjectId`, `ManualRef`, `ManualRefsList`,
