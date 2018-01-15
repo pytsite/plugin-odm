@@ -210,5 +210,8 @@ def aggregate(model: str):
 def clear_finder_cache(model: str):
     """Get finder cache pool
     """
-    _cache.get_pool('odm.finder.' + model).clear()
-    _events.fire('odm@finder_cache.clear', model=model)
+    try:
+        _cache.get_pool('odm.finder.' + model).clear()
+        _events.fire('odm@finder_cache.clear', model=model)
+    except _cache.error.PoolNotExist:
+        pass

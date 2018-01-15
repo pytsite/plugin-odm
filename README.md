@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.3 (2018-01-15)
+
+Finder cache management issue fixed.
+
+
 ### 1.4.2 (2018-01-13)
 
 Finder cache management issue fixed.
