@@ -515,21 +515,15 @@ class ManualRef(Abstract):
         """Hook
         """
         # Get first item from the iterable value
-        if type(raw_value) in (list, tuple):
+        if isinstance(raw_value, (list, tuple)):
             if len(raw_value):
                 raw_value = raw_value[0]
             else:
                 return None
 
-        # Check type
-        from ._model import Entity
-        if not isinstance(raw_value, (str, Entity, _bson_DBRef)):
-            raise TypeError("Error while setting value of the field '{}': "
-                            "string, entity or DBRef expected, got '{}'.".format(self._name, repr(raw_value)))
-
         from ._api import resolve_manual_ref
 
-        return resolve_manual_ref(raw_value)
+        return resolve_manual_ref(raw_value) if raw_value else None
 
     def _on_get(self, value: _Optional[str], **kwargs):
         """Hook
@@ -658,7 +652,6 @@ class RefsList(List):
 
     def _on_add(self, current_value: list, raw_value_to_add, **kwargs):
         """Add a value to the field
-
         """
         from ._model import Entity
 

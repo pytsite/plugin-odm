@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.4 (2018-01-16)
+
+Error in `resolve_manual_ref()` fixed.
+
+
 ### 1.4.3 (2018-01-15)
 
 Finder cache management issue fixed.

@@ -165,7 +165,7 @@ def resolve_manual_ref(something: _Union[str, _model.Entity, _DBRef]) -> str:
 
     elif isinstance(something, _DBRef):
         try:
-            return _COLLECTION_NAME_TO_MODEL[something.collection]
+            return '{}:{}'.format(_COLLECTION_NAME_TO_MODEL[something.collection], something.id)
         except KeyError:
             raise _error.UnknownCollection(something.collection)
 
