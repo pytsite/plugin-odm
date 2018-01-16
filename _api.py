@@ -95,6 +95,8 @@ def parse_manual_ref(ref: str) -> _List[str]:
         parts = ref.split(':')
         if len(parts) != 2:
             raise ValueError()
+
+        # Check if the ObjectID is valid
         _ObjectId(parts[1])
 
     except (ValueError, TypeError, _bson_errors.InvalidId):

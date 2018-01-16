@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.5 (2018-01-17)
+
+Error in `field.ManualRef` fixed.
+
+
 ### 1.4.4 (2018-01-16)
 
 Error in `resolve_manual_ref()` fixed.

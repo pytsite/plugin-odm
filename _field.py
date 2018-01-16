@@ -533,13 +533,20 @@ class ManualRef(Abstract):
         if value is None:
             return None
 
-        from ._api import find
-        entity = find(self._model).eq('_ref', value).first()
+        try:
+            from ._api import find, parse_manual_ref
 
-        if not entity and not self._ignore_missing:
-            raise _error.ReferencedDocumentNotFound(value)
+            ref = parse_manual_ref(value)
+            entity = find(ref[0]).eq('_id', ref[1]).first()
 
-        return entity
+            if not entity:
+                raise _error.ReferencedDocumentNotFound(value)
+
+            return entity
+
+        except (_error.ModelNotRegistered, _error.ReferencedDocumentNotFound) as e:
+            if not self._ignore_missing:
+                raise e
 
     def _on_get_jsonable(self, value, **kwargs):
         """Get serializable representation of the field's value.
