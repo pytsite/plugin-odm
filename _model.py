@@ -513,7 +513,7 @@ class Entity(_ABC):
             'is_new': self._is_new,
             'collection_name': self._collection_name,
             'fields_data': self.as_storable(),
-        }).execute()
+        }).execute(True)
 
         # Saved entity cannot be 'new'
         if self._is_new:
@@ -581,7 +581,7 @@ class Entity(_ABC):
             'model': self._model,
             'collection_name': self._collection_name,
             '_id': self.id,
-        }).execute()
+        }).execute(True)
 
         # Clear finder cache
         from . import _api

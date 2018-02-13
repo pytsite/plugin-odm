@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.4.6 (2018-02-13)
+
+Non-blocking saving and deletion made blocking.
+
+
 ### 1.4.5 (2018-01-17)
 
 Error in `field.ManualRef` fixed.
