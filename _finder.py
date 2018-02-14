@@ -385,3 +385,6 @@ class Finder:
             r.append(v)
 
         return r
+
+    def __len__(self) -> int:
+        return self.count()

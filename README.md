@@ -4,6 +4,13 @@
 ## Changelog
 
 
+### 1.5 (2018-02-14)
+
+- `Finder.__len__()` method added.
+- `FinderResult` renamed to `Result`.
+- `Entity` added to the public API.
+
+
 ### 1.4.6 (2018-02-13)
 
 Non-blocking saving and deletion made blocking.
