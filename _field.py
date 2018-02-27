@@ -207,7 +207,10 @@ class List(Abstract):
 
         :type raw_value: list | tuple
         """
-        if type(raw_value) not in (list, tuple):
+        if raw_value is None:
+            return []
+
+        if not isinstance(raw_value, (list, tuple)):
             raise TypeError(
                 "Field '{}': list or tuple expected, got {}: {}".format(self._name, type(raw_value), raw_value))
 
@@ -331,6 +334,9 @@ class Dict(Abstract):
     def _on_set(self, raw_value: _Union[dict, _frozendict], **kwargs) -> dict:
         """Hook
         """
+        if raw_value is None:
+            return {}
+
         if type(raw_value) not in (dict, _frozendict):
             raise TypeError("Value of the field '{}' should be a dict. Got '{}'.".format(self._name, type(raw_value)))
 
@@ -385,6 +391,9 @@ class Enum(Abstract):
         super().__init__(name, **kwargs)
 
     def _on_set(self, raw_value, **kwargs):
+        if raw_value is None:
+            return None
+
         if not isinstance(raw_value, self._valid_types):
             raise TypeError("Value of the field '{}' should be one of these types: {}".
                             format(self.name, self._valid_types))
@@ -421,6 +430,9 @@ class Ref(Abstract):
 
         :type raw_value: odm.model.Entity | _bson_DBRef | str | None
         """
+        if raw_value is None:
+            return None
+
         # Get first item from the iterable value
         if type(raw_value) in (list, tuple):
             if len(raw_value):
@@ -596,6 +608,9 @@ class RefsList(List):
     def _on_set(self, raw_value, **kwargs) -> _List[_bson_DBRef]:
         """Set value of the field
         """
+        if raw_value is None:
+            return []
+
         from ._model import Entity
         if not isinstance(raw_value, (list, tuple)):
             raise TypeError(
@@ -725,6 +740,9 @@ class ManualRefsList(List):
     def _on_set(self, raw_value, **kwargs) -> _List[str]:
         """Set value of the field
         """
+        if raw_value is None:
+            return []
+
         from ._api import resolve_manual_ref
 
         if not isinstance(raw_value, (list, tuple)):
@@ -843,6 +861,9 @@ class DateTime(Abstract):
     def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _datetime:
         """Set field's value
         """
+        if raw_value is None:
+            return _datetime.fromtimestamp(0)
+
         if not isinstance(raw_value, _datetime):
             raise TypeError("DateTime expected, got '{}'".format(type(raw_value)))
 
@@ -951,6 +972,9 @@ class String(Abstract):
     def _on_set(self, raw_value: str, **kwargs) -> str:
         """Hook
         """
+        if raw_value is None:
+            return ''
+
         if not isinstance(raw_value, str):
             raise TypeError("Field '{}': string object expected, got {}.".format(self.name, type(raw_value)))
 
@@ -1005,6 +1029,9 @@ class Integer(Abstract):
     def _on_set(self, raw_value: int, **kwargs) -> int:
         """Set value of the field
         """
+        if raw_value is None:
+            return 0
+
         if not isinstance(raw_value, int):
             raw_value = int(raw_value)
 
@@ -1063,6 +1090,9 @@ class Decimal(Abstract):
 
         :type raw_value: _Decimal | float | int | str
         """
+        if raw_value is None:
+            return 0.0
+
         if not isinstance(raw_value, float):
             try:
                 raw_value = float(raw_value)
@@ -1172,6 +1202,9 @@ class DecimalList(List):
         super().__init__(name, allowed_types=(float, _Decimal), **kwargs)
 
     def _on_set(self, raw_value: list, **kwargs) -> _List[float]:
+        if raw_value is None:
+            return []
+
         for i in range(0, len(raw_value)):
             raw_value[i] = float(raw_value[i]) if not isinstance(raw_value[i], float) else raw_value[i]
 

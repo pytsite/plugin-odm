@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.6.1 (2018-02-27)
+
+Fields bugfix.
+
+
 ### 1.6 (2018-02-27)
 
 - Support for nested entities added.
