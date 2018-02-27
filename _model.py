@@ -45,6 +45,7 @@ class Entity(_ABC):
         self._is_deleted = False
         self._indexes = []
         self._has_text_index = False
+        self._pending_children = []
 
         self._fields = _OrderedDict()  # type: _Dict[str, _field.Abstract]
 
@@ -53,7 +54,6 @@ class Entity(_ABC):
         self.define_field(_field.String('_ref', required=True))
         self.define_field(_field.String('_model', required=True, default=self._model))
         self.define_field(_field.ManualRef('_parent', model=model))
-        self.define_field(_field.ManualRefsList('_children', model=model))
         self.define_field(_field.Integer('_depth', required=True, default=0))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
@@ -64,6 +64,7 @@ class Entity(_ABC):
         _events.fire('odm@model.setup_fields.{}'.format(model), entity=self)
 
         # Delegate indexes setup process to the hook method
+        self.define_index([('_parent', I_ASC)])
         self._setup_indexes()
         _events.fire('odm@model.setup_indexes', entity=self)
         _events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
@@ -203,7 +204,7 @@ class Entity(_ABC):
         pass
 
     def _setup_indexes(self):
-        """Hook.
+        """Hook
         """
         pass
 
@@ -270,36 +271,70 @@ class Entity(_ABC):
 
     @property
     def parent(self):
-        """Get parent entity.
+        """Get parent entity
         :rtype: Entity
         """
         return self.f_get('_parent')
 
     @property
     def children(self):
-        """Get children entities.
+        """Get children entities
 
-        :rtype: typing.Tuple[Entity]
+        :rtype: typing.Iterable[Entity]
         """
-        return self.f_get('_children')
+        if self.is_new:
+            return []
+
+        from . import _api
+
+        return _api.find(self._model).eq('_parent', self).get()
+
+    @property
+    def descendants(self):
+        """Get descendant entities
+
+        :rtype: typing.Iterable[Entity]
+        """
+        for child in self.children:
+            yield child
+            for d in child.descendants:
+                yield d
 
     @property
     def depth(self) -> int:
-        """Get depth of the entity in children tree.
+        """Get depth of the entity in the tree
         """
         return self.f_get('_depth')
 
+    @depth.setter
+    def depth(self, value: int):
+        """Get depth of the entity in the tree
+        """
+        self.f_set('_depth', value)
+
     @property
     def created(self) -> _datetime:
-        """Get created date/time.
+        """Get date/time when the entity was created
         """
         return self.f_get('_created')
 
+    @created.setter
+    def created(self, value: int):
+        """Set date/time when the entity was created
+        """
+        self.f_set('_created', value)
+
     @property
     def modified(self) -> _datetime:
-        """Get modified date/time.
+        """Get date/time when the entity was modified
         """
         return self.f_get('_modified')
+
+    @modified.setter
+    def modified(self, value: int):
+        """Set date/time when the entity was modified
+        """
+        self.f_set('_modified', value)
 
     @property
     def is_new(self) -> bool:
@@ -335,6 +370,26 @@ class Entity(_ABC):
             raise RuntimeWarning("_on_f_set() for field '{}.{}' returned None".format(self._model, field_name))
 
         field.set_val(hooked_val, **kwargs)
+
+        # Check relations
+        if field_name == '_parent':
+            parent = field.get_val()  # type: Entity
+
+            if parent and parent.is_descendant_of(self):
+                raise RuntimeError('Entity {} cannot be parent of {} as it is its descendant'.format(parent, self))
+
+            # Update depth
+            self.depth = parent.depth + 1 if parent else 0
+
+            # Recalculate depths of children
+            for child in self.children:
+                child.depth = self.depth + 1
+
+        elif field_name == '_depth':
+            # Recalculate depths of children
+            for child in self.children:
+                child.depth = field.get_val() + 1
+                self._pending_children.append(child)
 
         if update_state:
             self._is_modified = True
@@ -372,7 +427,7 @@ class Entity(_ABC):
         """
         return value
 
-    def f_add(self, field_name: str, value, update_state=True, **kwargs):
+    def f_add(self, field_name: str, value, update_state: bool = True, **kwargs):
         """Add a value to the field.
         """
         value = self._on_f_add(field_name, value, **kwargs)
@@ -388,7 +443,7 @@ class Entity(_ABC):
         """
         return value
 
-    def f_sub(self, field_name: str, value, update_state=True, **kwargs):
+    def f_sub(self, field_name: str, value, update_state: bool = True, **kwargs):
         """Subtract value from the field.
         """
         # Call hook
@@ -407,7 +462,7 @@ class Entity(_ABC):
         """
         return value
 
-    def f_inc(self, field_name: str, update_state=True, **kwargs):
+    def f_inc(self, field_name: str, update_state: bool = True, **kwargs):
         """Increment value of the field.
         """
         self._on_f_inc(field_name, **kwargs)
@@ -423,7 +478,7 @@ class Entity(_ABC):
         """
         pass
 
-    def f_dec(self, field_name: str, update_state=True, **kwargs):
+    def f_dec(self, field_name: str, update_state: bool = True, **kwargs):
         """Decrement value of the field
         """
         self._on_f_dec(field_name, **kwargs)
@@ -439,18 +494,18 @@ class Entity(_ABC):
         """
         pass
 
-    def f_clr(self, field_name: str, update_state=True, **kwargs):
+    def f_rst(self, field_name: str, update_state: bool = True, **kwargs):
         """Clear field.
         """
-        self._on_f_clr(field_name, **kwargs)
-        self.get_field(field_name).clr_val()
+        self._on_f_rst(field_name, **kwargs)
+        self.get_field(field_name).rst_val()
 
         if update_state:
             self._is_modified = True
 
         return self
 
-    def _on_f_clr(self, field_name: str, **kwargs):
+    def _on_f_rst(self, field_name: str, **kwargs):
         """On field's clear value hook.
         """
         pass
@@ -466,12 +521,9 @@ class Entity(_ABC):
         :type child: Entity
         """
         if child.is_new:
-            raise RuntimeError('Entity should be saved before it can be as a child')
+            raise RuntimeError('Entity should be saved before it can be a child')
 
-        child.f_set('_parent', self)
-        child.f_set('_depth', self.depth + 1)
-
-        self.f_add('_children', child)
+        self._pending_children.append(child.f_set('_parent', self).f_set('_depth', self.depth + 1))
 
         return self
 
@@ -480,10 +532,50 @@ class Entity(_ABC):
 
         :type child: Entity
         """
-        self.f_sub('_children', child)
-        child.f_clr('_parent')
+        if child.is_new:
+            raise RuntimeError('Entity should be saved before it can be a child')
+
+        self._pending_children.append(child.f_set('_parent', None).f_set('_depth', 0))
 
         return self
+
+    def is_child_of(self, parent):
+        """Check if the entity is a child of a parent
+
+        :type parent: Entity
+        """
+        return self.parent == parent
+
+    def is_parent_of(self, child):
+        """Check if the entity is a parent of a child
+
+        :type child: Entity
+        """
+        return child.parent == self
+
+    def is_descendant_of(self, ancestor):
+        """Check if the entity is a descendant of an ancestor
+
+        :type ancestor: Entity
+        """
+        if ancestor.is_new:
+            return False
+
+        par = self.parent
+        while par:
+            if par == ancestor:
+                return True
+
+            par = par.parent
+
+        return False
+
+    def is_ancestor_of(self, descendant):
+        """Check if the entity is an ancestor of a descendant
+
+        :type descendant: Entity
+        """
+        return descendant.is_descendant_of(self)
 
     def save(self, **kwargs):
         """Save the entity.
@@ -532,14 +624,12 @@ class Entity(_ABC):
         self._is_modified = False
 
         # Save children with updated '_parent' field
-        if self.children:
-            for child in self.children:
-                child.save(update_timestamp=False)
+        for child in self._pending_children:
+            child.save(update_timestamp=False)
 
-        # Clear entire finder cache for the model if a new entity was created
-        if first_save:
-            from . import _api
-            _api.clear_finder_cache(self._model)
+        # Clear finder cache
+        from . import _api
+        _api.clear_finder_cache(self._model)
 
         return self
 
@@ -573,8 +663,9 @@ class Entity(_ABC):
         for f_name, field in self._fields.items():
             field.on_entity_delete()
 
-        # Get children to notify them about parent deletion
-        children = self.children
+        # Clear parent reference from orphaned children
+        for child in self.children:
+            child.f_set('_parent', None).save()
 
         # Actual deletion from the database and cache
         _queue.put('entity_delete', {
@@ -586,10 +677,6 @@ class Entity(_ABC):
         # Clear finder cache
         from . import _api
         _api.clear_finder_cache(self._model)
-
-        # Clearing parent reference from orphaned children
-        for child in children:
-            child.f_clr('_parent').save()
 
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
@@ -672,11 +759,11 @@ class Entity(_ABC):
         return self.manual_ref
 
     def __eq__(self, other) -> bool:
-        """__eq__ overloading.
+        """__eq__ overloading
         """
         if isinstance(other, _DBRef):
             return self.ref == other
-        elif hasattr(other, 'ref'):
-            return self.ref == other.ref
+        elif hasattr(other, 'manual_ref'):
+            return self.manual_ref == other.manual_ref
 
         return False

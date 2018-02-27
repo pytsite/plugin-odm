@@ -20,21 +20,23 @@ from ._api import register_model, unregister_model, is_model_registered, get_mod
 
 def plugin_load():
     from pytsite import console, lang, events
-    from . import _console_command, _eh
+    from . import _cc, _eh
 
     # Resources
     lang.register_package(__name__)
 
     # Console commands
-    console.register_command(_console_command.Reindex())
+    console.register_command(_cc.Reindex())
 
     # Event listeners
     events.listen('pytsite.mongodb@restore', _eh.db_restore)
 
 
 def plugin_update(v_from: _semver.Version):
-    if v_from < _semver.Version('1.4'):
-        from pytsite import mongodb, console
+    from pytsite import console
+
+    if v_from < '1.4':
+        from pytsite import mongodb
 
         for collection_name in mongodb.get_collection_names():
             collection = mongodb.get_collection(collection_name)
@@ -45,3 +47,6 @@ def plugin_update(v_from: _semver.Version):
                 doc['_ref'] = '{}:{}'.format(doc['_model'], doc['_id'])
                 collection.replace_one({'_id': doc['_id']}, doc)
                 console.print_info('Document {} updated'.format(doc['_ref']))
+
+    elif v_from < '1.6':
+        console.run_command('odm:reindex')

@@ -91,18 +91,19 @@ class Abstract:
     def set_val(self, value, **kwargs):
         """Set value of the field
         """
-        if value is None:
-            self._value = _deepcopy(self._default)
-        else:
-            # Pass value through the hook
-            self._value = self._on_set(value, **kwargs)
+        self._value = self._on_set(value, **kwargs)
 
         return self
 
-    def clr_val(self):
+    def _on_rst(self, raw_value, **kwargs):
+        """Hook, called by self.rst_val()
+        """
+        return self.set_val(_deepcopy(self._default))
+
+    def rst_val(self):
         """Reset field's value to default
         """
-        return self.set_val(None)
+        return self.set_val(_deepcopy(self._default))
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val()

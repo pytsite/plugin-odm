@@ -1,14 +1,14 @@
 """PytSite ODM Plugin Finder
 """
-from typing import Iterable as _Iterable, Union as _Union
+__author__ = 'Alexander Shepetko'
+__email__ = 'a@shepetko.com'
+__license__ = 'MIT'
+
+from typing import List as _List, Tuple as _Tuple, Union as _Union
 from bson import DBRef as _DBRef
 from pymongo.cursor import Cursor as _Cursor, CursorType as _CursorType
 from pytsite import util as _util, reg as _reg, cache as _cache, logger as _logger
 from . import _model, _api, _query
-
-__author__ = 'Alexander Shepetko'
-__email__ = 'a@shepetko.com'
-__license__ = 'MIT'
 
 _DBG = _reg.get('odm.debug_finder')
 _DEFAULT_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)  # 24 hours
@@ -19,7 +19,7 @@ class Result:
     """
 
     def __init__(self, model: str, cursor: _Cursor = None, ids: list = None):
-        """Init.
+        """Init
         """
         self._model = model
         self._cursor = cursor
@@ -36,12 +36,12 @@ class Result:
         return self._ids
 
     def __iter__(self):
-        """Get iterator.
+        """Get iterator
         """
         return self
 
     def __next__(self) -> _model.Entity:
-        """Get next item.
+        """Get next item
         """
         if self._current == self._total:
             raise StopIteration()
@@ -58,7 +58,7 @@ class Result:
         return self._total
 
     def explain(self) -> dict:
-        """Explain the cursor.
+        """Explain the cursor
         """
         if not self._cursor:
             raise RuntimeError('Cannot explain cached results.')
@@ -82,7 +82,7 @@ class Result:
 
 
 class Finder:
-    def __init__(self, model: str, cache_pool: _cache.Pool):
+    def __init__(self, model: str, cache_pool: _cache.Pool, limit: int = 0, skip: int = 0):
         """Init.
         """
         self._model = model
@@ -91,8 +91,8 @@ class Finder:
         self._cache_key = {'$and': {}, '$or': {}}
         self._mock = _api.dispense(model)
         self._query = _query.Query(self._mock)
-        self._skip = 0
-        self._limit = 0
+        self._skip = skip
+        self._limit = limit
         self._sort = None
 
     @property
@@ -283,8 +283,8 @@ class Finder:
 
         return self
 
-    def sort(self, fields=None):
-        """Set sort criteria.
+    def sort(self, fields: _List[_Tuple[str, int]] = None):
+        """Set sort criteria
         """
         if fields:
             for f in fields:
@@ -293,6 +293,17 @@ class Finder:
             self._sort = fields
         else:
             self._sort = None
+
+        return self
+
+    def add_sort(self, field: str, direction: int = _model.I_ASC, pos: int = None):
+        if self._sort is None:
+            self._sort = []
+
+        if pos is None:
+            pos = len(self._sort)
+
+        self._sort.insert(pos, (field, direction))
 
         return self
 
@@ -313,10 +324,12 @@ class Finder:
 
         return count
 
-    def get(self, limit: int = 0) -> _Union[_Iterable[_model.Entity], Result]:
-        """Execute the query and return a cursor.
+    def get(self, limit: int = None) -> Result:
+        """Execute the query
         """
-        self._limit = limit
+        if limit is not None:
+            self._limit = limit
+
         query = self._query.compile()
 
         # Search for previous result in cache
@@ -388,3 +401,9 @@ class Finder:
 
     def __len__(self) -> int:
         return self.count()
+
+    def __iter__(self):
+        return self.get()
+
+    def __str__(self) -> str:
+        return str(self.query)

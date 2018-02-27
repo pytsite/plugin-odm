@@ -195,10 +195,10 @@ def dispense(model: str, uid: _Union[str, _ObjectId, None] = None) -> _model.Ent
         return model_class(model)
 
 
-def find(model: str) -> _finder.Finder:
-    """Get finder instance
+def find(model: str, limit: int = 0, skip: int = 0) -> _finder.Finder:
+    """Get finder's instance
     """
-    return _finder.Finder(model, _cache.get_pool('odm.finder.' + model))
+    return _finder.Finder(model, _cache.get_pool('odm.finder.' + model), limit, skip)
 
 
 def aggregate(model: str):

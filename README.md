@@ -4,6 +4,13 @@
 ## Changelog
 
 
+### 1.6 (2018-02-27)
+
+- Support for nested entities added.
+- Finder improved.
+- Caching error fixed.
+
+
 ### 1.5 (2018-02-14)
 
 - `Finder.__len__()` method added.
