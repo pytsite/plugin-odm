@@ -9,7 +9,8 @@ from bson import errors as _bson_errors
 from bson.dbref import DBRef as _DBRef
 from bson.objectid import ObjectId as _ObjectId
 from pymongo.collection import Collection as _Collection
-from pytsite import mongodb as _db, util as _util, events as _events, cache as _cache
+from pytsite import mongodb as _db, util as _util, events as _events, cache as _cache, lang as _lang, \
+    console as _console
 from . import _model, _error, _finder
 
 _ENTITIES_CACHE = _cache.get_pool('odm.entities')
@@ -193,6 +194,17 @@ def dispense(model: str, uid: _Union[str, _ObjectId, None] = None) -> _model.Ent
     # Create a new entity
     else:
         return model_class(model)
+
+
+def reindex(model: str = None):
+    """Reindex model(s)'s collection
+    """
+    if model:
+        _console.print_info(_lang.t('odm@reindex_model', {'model': model}))
+        dispense(model).reindex()
+    else:
+        for model in get_registered_models():
+            reindex(model)
 
 
 def find(model: str, limit: int = 0, skip: int = 0) -> _finder.Finder:

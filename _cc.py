@@ -1,6 +1,6 @@
 """PytSite ODM Plugin ODM Console Commands
 """
-from pytsite import console as _console, lang as _lang, logger as _logger, maintenance as _maintenance
+from pytsite import console as _console, maintenance as _maintenance
 from . import _api
 
 __author__ = 'Alexander Shepetko'
@@ -37,11 +37,7 @@ class Reindex(_console.Command):
         if not no_maint:
             _maintenance.enable()
 
-        for model in _api.get_registered_models():
-            msg = _lang.t('odm@reindex_model', {'model': model})
-            _console.print_info(msg)
-            _logger.info(msg)
-            _api.dispense(model).reindex()
+        _api.reindex()
 
         if not no_maint:
             _maintenance.disable()

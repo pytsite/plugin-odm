@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.7 (2018-03-01)
+
+New API function: `reindex()`.
+
+
 ### 1.6.1 (2018-02-27)
 
 Fields bugfix.

@@ -15,7 +15,7 @@ from . import _field as field, _validation as validation, _error as error, _geo 
 from ._model import Entity, I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
 from ._finder import Finder, Result
 from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
-    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache, resolve_manual_ref
+    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache, resolve_manual_ref, reindex
 
 
 def plugin_load():
