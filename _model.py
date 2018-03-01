@@ -276,6 +276,12 @@ class Entity(_ABC):
         """
         return self.f_get('_parent')
 
+    @parent.setter
+    def parent(self, value):
+        """Get parent entity
+        """
+        self.f_set('_parent', value)
+
     @property
     def children(self):
         """Get children entities

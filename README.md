@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.8 (2018-03-01)
+
+`Entity.parent` setter added.
+
+
 ### 1.7 (2018-03-01)
 
 New API function: `reindex()`.
