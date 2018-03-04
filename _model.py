@@ -299,6 +299,9 @@ class Entity(_ABC):
     def children_count(self) -> int:
         """Get number of children
         """
+        if self.is_new:
+            return 0
+
         from . import _api
 
         return _api.find(self._model).eq('_parent', self).count()
