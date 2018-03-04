@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.8.1 (2018-03-05)
+
+Relations check fixed.
+
+
 ### 1.8 (2018-03-01)
 
 `Entity.parent` setter added.

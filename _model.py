@@ -381,8 +381,11 @@ class Entity(_ABC):
         if field_name == '_parent':
             parent = field.get_val()  # type: Entity
 
-            if parent and parent.is_descendant_of(self):
-                raise RuntimeError('Entity {} cannot be parent of {} as it is its descendant'.format(parent, self))
+            if parent:
+                if parent == self:
+                    raise RuntimeError('Entity cannot be parent of itself')
+                if parent.is_descendant_of(self):
+                    raise RuntimeError('Entity {} cannot be parent of {} as it is its descendant'.format(parent, self))
 
             # Update depth
             self.depth = parent.depth + 1 if parent else 0
@@ -528,6 +531,9 @@ class Entity(_ABC):
         """
         if child.is_new:
             raise RuntimeError('Entity should be saved before it can be a child')
+
+        if child == self:
+            raise RuntimeError('Entity cannot be child of itself')
 
         self._pending_children.append(child.f_set('_parent', self).f_set('_depth', self.depth + 1))
 
