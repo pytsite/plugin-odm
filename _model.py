@@ -296,6 +296,20 @@ class Entity(_ABC):
         return _api.find(self._model).eq('_parent', self).get()
 
     @property
+    def children_count(self) -> int:
+        """Get number of children
+        """
+        from . import _api
+
+        return _api.find(self._model).eq('_parent', self).count()
+
+    @property
+    def has_children(self) -> bool:
+        """Check if the entity has at least one child
+        """
+        return bool(self.children_count)
+
+    @property
     def descendants(self):
         """Get descendant entities
 

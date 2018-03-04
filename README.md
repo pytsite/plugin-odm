@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 1.9 (2018-03-05)
+
+New properties: `Entity.children_count` and `Entity.has_children`.
+
+
 ### 1.8.1 (2018-03-05)
 
 Relations check fixed.
