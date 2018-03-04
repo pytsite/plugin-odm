@@ -399,7 +399,7 @@ class Entity(_ABC):
             parent = field.get_val()  # type: Entity
 
             if parent:
-                if parent == self:
+                if not self.is_new and parent == self:
                     raise RuntimeError('Entity cannot be parent of itself')
                 if parent.is_descendant_of(self):
                     raise RuntimeError('Entity {} cannot be parent of {} as it is its descendant'.format(parent, self))
@@ -573,14 +573,14 @@ class Entity(_ABC):
 
         :type parent: Entity
         """
-        return self.parent == parent
+        return not self.is_new and self.parent == parent
 
     def is_parent_of(self, child):
         """Check if the entity is a parent of a child
 
         :type child: Entity
         """
-        return child.parent == self
+        return not self.is_new and child.parent == self
 
     def is_descendant_of(self, ancestor):
         """Check if the entity is a descendant of an ancestor

@@ -4,9 +4,14 @@
 ## Changelog
 
 
+### 1.9.2 (2018-03-05)
+
+Entities relation check fixed
+
+
 ### 1.9.1 (2018-03-05)
 
-Relations check fixed in `entity.children_count`.
+Entities relation check fixed in `entity.children_count`.
 
 
 ### 1.9 (2018-03-05)
