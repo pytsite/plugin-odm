@@ -742,7 +742,7 @@ class Entity(_ABC):
             if check_required_fields and f.required and f.is_empty:
                 raise _error.FieldEmpty("Value of the field '{}.{}' cannot be empty".format(self._model, f_name))
 
-            r[f_name] = f.get_raw_val()
+            r[f_name] = f.get_storable_val()
 
         return r
 

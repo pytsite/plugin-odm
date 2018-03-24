@@ -4,6 +4,13 @@
 ## Changelog
 
 
+### 1.10 (2018-03-24)
+
+- `field.Abstract.get_raw_val()` renamed to
+  `field.Abstract.get_storable_val()`.
+- New hook method added: `field._on_get_storable()`.
+
+
 ### 1.9.2 (2018-03-05)
 
 Entities relation check fixed

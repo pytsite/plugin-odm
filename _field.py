@@ -56,10 +56,15 @@ class Abstract:
     def default(self, value):
         self._default = value
 
-    def get_raw_val(self) -> _Any:
-        """Get raw value of teh field
+    def _on_get_storable(self, value, **kwargs):
+        """Hook
         """
-        return self._value
+        return value
+
+    def get_storable_val(self, **kwargs) -> _Any:
+        """Get value of the field which can be safely saved in the storage
+        """
+        return self._on_get_storable(self._value, **kwargs)
 
     def _on_get(self, value, **kwargs):
         """Hook. Transforms internal value for external representation
@@ -69,12 +74,10 @@ class Abstract:
     def get_val(self, **kwargs) -> _Any:
         """Get value of the field
         """
-        value = self._on_get(self._value, **kwargs)
-
-        return value
+        return self._on_get(self._value, **kwargs)
 
     def _on_get_jsonable(self, value, **kwargs):
-        """Hook.
+        """Hook
         """
         return value
 
@@ -84,7 +87,7 @@ class Abstract:
         return self._on_get_jsonable(self._value, **kwargs)
 
     def _on_set(self, raw_value, **kwargs):
-        """Hook, called by self.set_val()
+        """Hook
         """
         return raw_value
 
@@ -96,7 +99,7 @@ class Abstract:
         return self
 
     def _on_rst(self, raw_value, **kwargs):
-        """Hook, called by self.rst_val()
+        """Hook
         """
         return self.set_val(_deepcopy(self._default))
 
