@@ -1,12 +1,12 @@
 """PytSite ODM Plugin Aggregation
 """
-
-from typing import Any as _Any, List as _List, Dict as _Dict, Union as _Union
-from . import _api, _query
-
 __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
+
+from typing import List as _List, Dict as _Dict, Union as _Union
+from plugins import query as _query
+from . import _api, _odm_query
 
 
 class Aggregator:
@@ -22,15 +22,12 @@ class Aggregator:
         self._mock = _api.dispense(model)
         self._pipeline = []
 
-    def match(self, field_name: str, comparison_op: str, arg: _Any):
+    def match(self, op: _query.Operator):
         """Add a match stage
 
         https://docs.mongodb.com/manual/reference/operator/aggregation/match/
         """
-        q = _query.Query(self._mock)
-        q.add_criteria('$and', field_name, comparison_op, arg)
-
-        self._pipeline.append(('$match', q.compile()))
+        self._pipeline.append(('$match', _odm_query.ODMQuery(self._mock, op).compile()))
 
         return self
 

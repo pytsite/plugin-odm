@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 2.0 (2018-04-06)
+
+Query building logic moved to separate plugin named `query`.
+
+
 ### 1.10 (2018-03-24)
 
 - `field.Abstract.get_raw_val()` renamed to

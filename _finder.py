@@ -8,7 +8,8 @@ from typing import List as _List, Tuple as _Tuple, Union as _Union
 from bson import DBRef as _DBRef
 from pymongo.cursor import Cursor as _Cursor, CursorType as _CursorType
 from pytsite import util as _util, reg as _reg, cache as _cache, logger as _logger
-from . import _model, _api, _query
+from plugins import query as _query
+from . import _model, _api, _odm_query
 
 _DBG = _reg.get('odm.debug_finder')
 _DEFAULT_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)  # 24 hours
@@ -88,9 +89,9 @@ class Finder:
         self._model = model
         self._cache_pool = cache_pool
         self._cache_ttl = _DEFAULT_CACHE_TTL
-        self._cache_key = {'$and': {}, '$or': {}}
+        self._cache_key = []
         self._mock = _api.dispense(model)
-        self._query = _query.Query(self._mock)
+        self._query = _odm_query.ODMQuery(self._mock)
         self._skip = skip
         self._limit = limit
         self._sort = None
@@ -108,7 +109,7 @@ class Finder:
         return self._mock
 
     @property
-    def query(self) -> _query.Query:
+    def query(self) -> _odm_query.ODMQuery:
         return self._query
 
     @property
@@ -136,145 +137,117 @@ class Finder:
 
         return self
 
-    def _add_query_criteria(self, logical_op: str, field_name: str, comparison_op: str, arg, cache: bool = True):
-        self._query.add_criteria(logical_op, field_name, comparison_op, arg)
+    def add(self, op: _query.Operator, cache: bool = True):
+        """Add a query operator
+        """
+        self._query.add(op)
 
         if cache:
-            if field_name not in self._cache_key[logical_op]:
-                self._cache_key[logical_op][field_name] = []
-
-            self._cache_key[logical_op][field_name].append((comparison_op, str(arg)))
+            self._cache_key.append(op.compile())
 
         return self
 
-    def _remove_query_field(self, logical_op: str, field_name: str):
-        self._query.remove_field(logical_op, field_name)
-
-        if field_name in self._cache_key[logical_op]:
-            del self._cache_key[logical_op][field_name]
-
-        return self
-
-    def _add_text_search(self, logical_op: str, search: str, language: str = None, cache: bool = True):
-        self._query.add_text_search(logical_op, search, language)
-
-        if cache:
-            if '$text' not in self._cache_key[logical_op]:
-                self._cache_key[logical_op]['$text'] = None
-
-            self._cache_key[logical_op]['$text'] = (search, language)
-
-        return self
-
-    def where(self, field_name: str, comparison_op: str, arg, cache: bool = True):
-        """Add an '$and' criteria
+    def eq(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, comparison_op, arg, cache)
+        return self.add(_query.And(_query.Eq(field, arg)), cache)
 
-    def eq(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $eq' criteria
+    def gt(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$eq', arg, cache)
+        return self.add(_query.And(_query.Gt(field, arg)), cache)
 
-    def gt(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $gt' criteria.
+    def gte(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$gt', arg, cache)
+        return self.add(_query.And(_query.Gte(field, arg)), cache)
 
-    def gte(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $gte' criteria.
+    def lt(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$gte', arg, cache)
+        return self.add(_query.And(_query.Lt(field, arg)), cache)
 
-    def lt(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $lt' criteria.
+    def lte(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$lt', arg, cache)
+        return self.add(_query.And(_query.Lte(field, arg)), cache)
 
-    def lte(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $lte' criteria.
+    def ne(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$lte', arg, cache)
+        return self.add(_query.And(_query.Ne(field, arg)), cache)
 
-    def ne(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $ne' criteria.
+    def inc(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$ne', arg, cache)
+        return self.add(_query.And(_query.In(field, arg)), cache)
 
-    def inc(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $in' criteria.
+    def ninc(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$in', arg, cache)
+        return self.add(_query.And(_query.Nin(field, arg)), cache)
 
-    def ninc(self, field_name: str, arg, cache: bool = True):
-        """Add an '$and $nin' criteria.
+    def regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
+              dot_all: bool = False, verbose: bool = False):
+        """Shortcut
         """
-        return self._add_query_criteria('$and', field_name, '$nin', arg, cache)
+        return self.add(_query.And(_query.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
 
-    def or_where(self, field_name: str, comparison_op: str, arg, cache: bool = True):
-        """Add '$or' criteria.
+    def or_eq(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, comparison_op, arg, cache)
+        return self.add(_query.Or(_query.Eq(field, arg)), cache)
 
-    def or_eq(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $eq' criteria.
+    def or_gt(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$eq', arg, cache)
+        return self.add(_query.Or(_query.Gt(field, arg)), cache)
 
-    def or_gt(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $gt' criteria.
+    def or_gte(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$gt', arg, cache)
+        return self.add(_query.Or(_query.Gte(field, arg)), cache)
 
-    def or_gte(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $gte' criteria.
+    def or_lt(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$gte', arg, cache)
+        return self.add(_query.Or(_query.Lt(field, arg)), cache)
 
-    def or_lt(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $lt' criteria.
+    def or_lte(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$lt', arg, cache)
+        return self.add(_query.Or(_query.Lte(field, arg)), cache)
 
-    def or_lte(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $lte' criteria.
+    def or_ne(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$lte', arg, cache)
+        return self.add(_query.Or(_query.Ne(field, arg)), cache)
 
-    def or_ne(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $ne' criteria.
+    def or_inc(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$ne', arg, cache)
+        return self.add(_query.Or(_query.In(field, arg)), cache)
 
-    def or_inc(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $in' criteria.
+    def or_ninc(self, field: str, arg, cache: bool = True):
+        """Shortcut
         """
-        return self._add_query_criteria('$or', field_name, '$in', arg, cache)
-
-    def or_ninc(self, field_name: str, arg, cache: bool = True):
-        """Add an '$or $nin' criteria.
-        """
-        return self._add_query_criteria('$or', field_name, '$nin', arg, cache)
+        return self.add(_query.Or(_query.Nin(field, arg)), cache)
 
     def text(self, search: str, language: str = None, cache: bool = True):
-        """Add '$text' criteria.
+        """Shortcut
         """
-        return self._add_text_search('$and', search, language, cache)
+        return self.add(_query.And(_query.Text(search, language)), cache)
 
     def or_text(self, search: str, language: str = None, cache: bool = True):
-        """Add '$or $text' criteria.
+        """Shortcut
         """
-        return self._add_text_search('$or', search, language, cache)
+        return self.add(_query.Or(_query.Text(search, language)), cache)
 
-    def remove_field(self, field_name: str):
-        """Remove field from query.
+    def or_regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
+                 dot_all: bool = False, verbose: bool = False):
+        """Shortcut
         """
-        return self._remove_query_field('$and', field_name)
-
-    def remove_or_field(self, field_name: str):
-        """Remove field from query.
-        """
-        return self._remove_query_field('$or', field_name)
+        return self.add(_query.Or(_query.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
 
     def skip(self, num: int):
         """Set number of records to skip in result cursor.
@@ -338,7 +311,7 @@ class Finder:
                 ids = self._cache_pool.get(self.id)
                 if _DBG:
                     _logger.debug("GET cached query results: query: {}, {}, id: {}, entities: {}.".
-                                  format(self.model, self.query.compile(), self.id, len(ids)))
+                                  format(self.model, query, self.id, len(ids)))
                 return Result(self._model, ids=ids)
 
             except _cache.error.KeyNotExist:
@@ -360,7 +333,7 @@ class Finder:
         if self._cache_ttl:
             if _DBG:
                 _logger.debug("STORE query results: query: {}, {}, id: {}, entities: {}, TTL: {}.".
-                              format(self.model, self.query.compile(), self.id, result.count(), self._cache_ttl))
+                              format(self.model, query, self.id, result.count(), self._cache_ttl))
 
             self._cache_pool.put(self.id, result.ids, self._cache_ttl)
 
@@ -384,11 +357,11 @@ class Finder:
 
         return self
 
-    def distinct(self, field_name: str) -> list:
-        """Get a list of distinct values for field_name among all documents in the collection
+    def distinct(self, field: str) -> list:
+        """Get a list of distinct values for field among all documents in the collection
         """
         from ._api import get_by_ref
-        values = self._mock.collection.distinct(field_name, self._query.compile())
+        values = self._mock.collection.distinct(field, self._query.compile())
 
         r = []
         for v in values:
@@ -406,4 +379,4 @@ class Finder:
         return self.get()
 
     def __str__(self) -> str:
-        return str(self.query)
+        return str(self._query.compile())

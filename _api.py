@@ -11,6 +11,7 @@ from bson.objectid import ObjectId as _ObjectId
 from pymongo.collection import Collection as _Collection
 from pytsite import mongodb as _db, util as _util, events as _events, cache as _cache, lang as _lang, \
     console as _console
+from plugins import query as _query
 from . import _model, _error, _finder
 
 _ENTITIES_CACHE = _cache.get_pool('odm.entities')
@@ -207,14 +208,20 @@ def reindex(model: str = None):
             reindex(model)
 
 
-def find(model: str, limit: int = 0, skip: int = 0) -> _finder.Finder:
+def find(model: str, limit: int = 0, skip: int = 0, query: _query.Query = None) -> _finder.Finder:
     """Get finder's instance
     """
-    return _finder.Finder(model, _cache.get_pool('odm.finder.' + model), limit, skip)
+    f = _finder.Finder(model, _cache.get_pool('odm.finder.' + model), limit, skip)
+
+    if query:
+        for op in query:
+            f.add(op)
+
+    return f
 
 
 def aggregate(model: str):
-    """Get aggregator instance.
+    """Get aggregator instance
     """
     from ._aggregation import Aggregator
 
