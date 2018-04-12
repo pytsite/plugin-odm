@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 2.0.1 (2018-04-12)
+
+Entity ID sanitizing added in `dispense()`.
+
+
 ### 2.0 (2018-04-06)
 
 Query building logic moved to separate plugin named `query`.

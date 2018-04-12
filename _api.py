@@ -180,11 +180,15 @@ def resolve_manual_refs(something: _List) -> _List[str]:
     return [resolve_manual_ref(v) for v in something]
 
 
-def dispense(model: str, uid: _Union[str, _ObjectId, None] = None) -> _model.Entity:
+def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _model.Entity:
     """Dispense an entity
     """
     if not is_model_registered(model):
         raise _error.ModelNotRegistered(model)
+
+    # Sanitize entity ID
+    if uid in (0, '0'):
+        uid = None
 
     model_class = get_model_class(model)
 
