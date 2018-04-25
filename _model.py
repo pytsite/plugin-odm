@@ -613,12 +613,6 @@ class Entity(_ABC):
         if not (self._is_modified or kwargs.get('force')):
             return self
 
-        # Pre-save hook
-        if kwargs.get('pre_hooks', True):
-            self._pre_save()
-            _events.fire('odm@entity.pre_save', entity=self)
-            _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
-
         # Update timestamp
         if kwargs.get('update_timestamp', True):
             self.f_set('_modified', _datetime.now())
@@ -628,6 +622,12 @@ class Entity(_ABC):
             oid = _ObjectId()
             self.f_set('_id', oid)
             self.f_set('_ref', '{}:{}'.format(self.model, oid))
+
+        # Pre-save hook
+        if kwargs.get('pre_hooks', True):
+            self._pre_save()
+            _events.fire('odm@entity.pre_save', entity=self)
+            _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
 
         # Save into storage
         _queue.put('entity_save', {

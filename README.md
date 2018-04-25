@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 2.1 (2018-04-25)
+
+`_pre_save()` hook calling order shifted.
+
+
 ### 2.0.1 (2018-04-12)
 
 Entity ID sanitizing added in `dispense()`.
