@@ -7,15 +7,16 @@ __license__ = 'MIT'
 from pytsite import semver as _semver, cache as _cache
 
 # This cache pool MUST be created before any imports
-if not _cache.has_pool('odm.entities'):
-    _cache.create_pool('odm.entities')
+_cache.create_pool('odm.entities')
 
 # Public API
 from . import _field as field, _validation as validation, _error as error, _model as model
 from ._model import Entity, I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
 from ._finder import Finder, Result
 from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
-    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_finder_cache, resolve_manual_ref, reindex
+    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_cache, resolve_manual_ref, reindex, \
+    on_model_register, on_model_setup_fields, on_model_setup_indexes, on_entity_pre_save, on_entity_save, \
+    on_entity_pre_delete, on_entity_delete, on_cache_clear
 
 
 def plugin_load():

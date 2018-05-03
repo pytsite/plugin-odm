@@ -40,7 +40,7 @@ def register_model(model: str, cls: _Union[str, type], replace: bool = False):
     _MODEL_TO_CLASS[model] = cls
 
     cls.on_register(model)
-    _events.fire('odm@register', model=model, cls=cls, replace=replace)
+    _events.fire('odm@model.register', model=model, cls=cls, replace=replace)
 
     mock = dispense(model)
 
@@ -232,11 +232,66 @@ def aggregate(model: str):
     return Aggregator(model)
 
 
-def clear_finder_cache(model: str):
+def clear_cache(model: str):
     """Get finder cache pool
     """
     try:
+        # Clear finder cache
         _cache.get_pool('odm.finder.' + model).clear()
-        _events.fire('odm@finder_cache.clear', model=model)
+
+        # Cleanup entities cache
+        for k in _ENTITIES_CACHE.keys():
+            if k.startswith(model + '.'):
+                _ENTITIES_CACHE.rm(k)
+
+        _events.fire('odm@cache.clear', model=model)
     except _cache.error.PoolNotExist:
         pass
+
+
+def on_model_register(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@model.register', handler, priority)
+
+
+def on_model_setup_fields(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@model.setup_fields', handler, priority)
+
+
+def on_model_setup_indexes(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@model.setup_indexes', handler, priority)
+
+
+def on_entity_pre_save(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@entity.pre_save', handler, priority)
+
+
+def on_entity_save(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@entity.save', handler, priority)
+
+
+def on_entity_pre_delete(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@entity.pre_delete', handler, priority)
+
+
+def on_entity_delete(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@entity.delete', handler, priority)
+
+
+def on_cache_clear(handler, priority: int = 0):
+    """Shortcut
+    """
+    _events.listen('odm@cache.clear', handler, priority)

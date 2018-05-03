@@ -4,6 +4,15 @@
 ## Changelog
 
 
+### 3.0 (2018-05-03)
+
+- New API function: `clear_cache()`.
+- Events related shortcut API functions added.
+- `clear_finder_cache()` removed.
+- `odm@register` event renamed to `odm@model.register`.
+- `odm@finder_cache.clear` event renamed to `odm@cache.clear`.
+
+
 ### 2.1 (2018-04-25)
 
 `_pre_save()` hook calling order shifted.

@@ -658,7 +658,7 @@ class Entity(_ABC):
 
         # Clear finder cache
         from . import _api
-        _api.clear_finder_cache(self._model)
+        _api.clear_cache(self._model)
 
         return self
 
@@ -705,7 +705,7 @@ class Entity(_ABC):
 
         # Clear finder cache
         from . import _api
-        _api.clear_finder_cache(self._model)
+        _api.clear_cache(self._model)
 
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
