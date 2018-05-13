@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.1 (2018-05-13)
+
+Support of PytSite-7.20.
+
+
 ### 3.0 (2018-05-03)
 
 - New API function: `clear_cache()`.

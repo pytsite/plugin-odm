@@ -51,8 +51,8 @@ def put(op: str, args: dict) -> _queue.Queue:
     """Enqueue a task
     """
     if op == 'entity_save':
-        return _QUEUE.put('plugins.odm._queue._entity_save', args)
+        return _QUEUE.put(_entity_save, args)
     elif op == 'entity_delete':
-        return _QUEUE.put('plugins.odm._queue._entity_delete', args)
+        return _QUEUE.put(_entity_delete, args)
     else:
         raise RuntimeError('Unsupported queue operation: {}'.format(op))
