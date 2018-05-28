@@ -1,6 +1,10 @@
 """PytSite ODM Plugin Fields
 """
-from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional
+__author__ = 'Alexander Shepetko'
+__email__ = 'a@shepetko.com'
+__license__ = 'MIT'
+
+from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional, Iterable as _Iterable
 from datetime import datetime as _datetime
 from decimal import Decimal as _Decimal
 from copy import deepcopy as _deepcopy
@@ -9,10 +13,6 @@ from bson.dbref import DBRef as _bson_DBRef
 from frozendict import frozendict as _frozendict
 from pytsite import lang as _lang, util as _util, validation as _validation, formatters as _formatters
 from . import _error
-
-__author__ = 'Alexander Shepetko'
-__email__ = 'a@shepetko.com'
-__license__ = 'MIT'
 
 
 class Abstract:
@@ -380,36 +380,22 @@ class Enum(Abstract):
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        self._valid_types = (int, float, str)
-
-        self._valid_values = kwargs.get('valid_values')
-        if not self._valid_values or not isinstance(self._valid_values, (list, tuple)):
-            raise RuntimeError("You must specify a list of valid values for enumerated field '{}'.".format(self.name))
-
-        for v in self._valid_values:
-            if not isinstance(v, self._valid_types):
-                raise TypeError("Value of argument 'valid_values' of the field '{}' should be one of these types: {}".
-                                format(self.name, self._valid_types))
+        self._values = kwargs.get('values')
+        if not hasattr(self._values, '__iter__'):
+            raise TypeError("'values' must be an iterable, got {}".format(type(self._values)))
 
         super().__init__(name, **kwargs)
 
     def _on_set(self, raw_value, **kwargs):
-        if raw_value is None:
-            return None
-
-        if not isinstance(raw_value, self._valid_types):
-            raise TypeError("Value of the field '{}' should be one of these types: {}".
-                            format(self.name, self._valid_types))
-
-        if raw_value not in self._valid_values:
-            raise ValueError(
-                "Value of the field '{}' can be only one of the following: {}".format(self.name, self._valid_values))
+        if raw_value is not None and raw_value not in self._values:
+            raise ValueError("Value of the field '{}' can be only one of the following: {}"
+                             .format(self.name, self._values))
 
         return raw_value
 
     @property
-    def valid_values(self) -> tuple:
-        return self._valid_values
+    def values(self) -> _Iterable:
+        return self._values
 
 
 class Ref(Abstract):

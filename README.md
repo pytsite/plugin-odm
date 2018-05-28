@@ -4,6 +4,14 @@
 ## Changelog
 
 
+### 3.2 (2018-05-28)
+
+`fields.Enum` changed:
+  - `valid_values` property and contructor's argument renamed to
+    `values`.
+  - `valid_types` contructor's argument removed.
+
+
 ### 3.1 (2018-05-13)
 
 Support of PytSite-7.20.
