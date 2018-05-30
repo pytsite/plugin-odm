@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.3 (2018-05-30)
+
+Support of `pytsite-7.23`.
+
+
 ### 3.2 (2018-05-28)
 
 `fields.Enum` changed:
@@ -14,7 +19,7 @@
 
 ### 3.1 (2018-05-13)
 
-Support of PytSite-7.20.
+Support of `pytsite-7.20`.
 
 
 ### 3.0 (2018-05-03)
@@ -146,7 +151,7 @@ Events names refactoring.
 
 ### 1.2 (2017-12-13)
 
-Support for PytSite-7.0.
+Support for `pytsite-7.0`.
 
 
 ### 1.1.3 (2017-12-08)
@@ -161,12 +166,12 @@ Init code fixed.
 
 ### 1.1.1 (2017-12-04)
 
-Support for caching subsystem changes of PytSite-6.1.
+Support for caching subsystem changes of `pytsite-6.1`.
 
 
 ### 1.1 (2017-12-02)
 
-Support for PytSite-6.1.
+Support for `pytsite-6.1`.
 
 
 ### 1.0 (2017-11-25)

@@ -4,7 +4,7 @@ __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Union as _Union, Optional as _Optional, List as _List, Tuple as _Tuple
+from typing import Union as _Union, Optional as _Optional, List as _List, Tuple as _Tuple, Type as _Type
 from bson import errors as _bson_errors
 from bson.dbref import DBRef as _DBRef
 from bson.objectid import ObjectId as _ObjectId
@@ -20,11 +20,11 @@ _MODEL_TO_COLLECTION = {}
 _COLLECTION_NAME_TO_MODEL = {}
 
 
-def register_model(model: str, cls: _Union[str, type], replace: bool = False):
+def register_model(model: str, cls: _Union[str, _Type[_model.Entity]], replace: bool = False):
     """Register a new ODM model
     """
     if isinstance(cls, str):
-        cls = _util.get_module_attr(cls)  # type: _model.Entity
+        cls = _util.get_module_attr(cls)  # type: _Type[_model.Entity]
 
     if not issubclass(cls, _model.Entity):
         raise TypeError("Unable to register model '{}': subclass of odm.model.Entity expected."
@@ -68,7 +68,7 @@ def is_model_registered(model: str) -> bool:
     return model in _MODEL_TO_CLASS
 
 
-def get_model_class(model: str) -> type:
+def get_model_class(model: str) -> _Type[_model.Entity]:
     """Get registered class for model name
     """
     try:

@@ -4,6 +4,8 @@ __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
+from pytsite import errors as _errors
+
 
 class Error(Exception):
     pass
@@ -29,7 +31,7 @@ class UnknownCollection(Error):
         return "There is no model registered for collection '{}'".format(self._collection)
 
 
-class ReferencedDocumentNotFound(Error):
+class ReferencedDocumentNotFound(Error, _errors.NotFound):
     def __init__(self, ref):
         self._ref = ref
 
@@ -37,7 +39,7 @@ class ReferencedDocumentNotFound(Error):
         return "Referenced document '{}' is not found in the database".format(self._ref)
 
 
-class EntityNotFound(Error):
+class EntityNotFound(Error, _errors.NotFound):
     def __init__(self, model: str, eid: str):
         self._model = model
         self._eid = eid
