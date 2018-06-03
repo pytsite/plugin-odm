@@ -567,7 +567,7 @@ class ManualRef(Abstract):
             from ._api import resolve_manual_ref
             arg = self.sanitize_finder_arg(arg.split(',')) if ',' in arg else resolve_manual_ref(arg)
 
-        elif isinstance(arg, (list, tuple)):
+        elif isinstance(arg, (dict, set, list, tuple)):
             clean_arg = []
             for v in arg:
                 clean_arg.append(self.sanitize_finder_arg(v))
@@ -1041,10 +1041,13 @@ class Integer(Abstract):
         # This field always is not empty
         return False
 
-    def sanitize_finder_arg(self, arg) -> int:
+    def sanitize_finder_arg(self, arg) -> _Union[int, _List[int]]:
         """Hook used for sanitizing Finder's query argument
         """
-        return int(arg)
+        if isinstance(arg, (set, list, tuple, dict)):
+            return [int(v) for v in arg]
+        else:
+            return int(arg)
 
 
 class Decimal(Abstract):
@@ -1113,10 +1116,14 @@ class Decimal(Abstract):
             raise TypeError("'{}' cannot be used as a value of the field '{}'"
                             .format(repr(raw_value_to_sub), self.name))
 
-    def sanitize_finder_arg(self, arg) -> float:
+    def sanitize_finder_arg(self, arg) -> _Union[float, _List[float]]:
         """Hook used for sanitizing Finder's query argument
         """
-        return float(arg)
+        if isinstance(arg, (set, list, tuple, dict)):
+            return [float(v) for v in arg]
+        else:
+            return float(arg)
+
 
 
 class Bool(Abstract):

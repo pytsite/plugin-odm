@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.3.1 (2018-06-03)
+
+Finder argument sanitization fixed in some fields.
+
+
 ### 3.3 (2018-05-30)
 
 Support of `pytsite-7.23`.
