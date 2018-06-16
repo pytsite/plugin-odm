@@ -1,5 +1,9 @@
 """PytSite ODM Plugin Entity Model
 """
+__author__ = 'Alexander Shepetko'
+__email__ = 'a@shepetko.com'
+__license__ = 'MIT'
+
 from typing import Any as _Any, Dict as _Dict, List as _List, Tuple as _Tuple, Union as _Union
 from abc import ABC as _ABC, abstractmethod as _abstractmethod
 from collections import OrderedDict as _OrderedDict
@@ -11,10 +15,6 @@ from pymongo.collection import Collection as _Collection
 from pymongo.errors import OperationFailure as _OperationFailure
 from pytsite import mongodb as _db, events as _events, lang as _lang, errors as _errors, cache as _cache, reg as _reg
 from . import _error, _field, _queue
-
-__author__ = 'Alexander Shepetko'
-__email__ = 'a@shepetko.com'
-__license__ = 'MIT'
 
 _CACHE_POOL = _cache.get_pool('odm.entities')
 _CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
@@ -35,6 +35,8 @@ class Entity(_ABC):
         if self._collection_name is None:
             if model[-1:] in ('s', 'h'):
                 self._collection_name = model + 'es'
+            elif model[-1:] in ('y',):
+                self._collection_name = model[:-1] + 'ies'
             else:
                 self._collection_name = model + 's'
 

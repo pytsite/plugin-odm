@@ -5,8 +5,9 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 from typing import List as _List, Dict as _Dict, Union as _Union
+from pymongo.command_cursor import CommandCursor as _CommandCursor
 from plugins import query as _query
-from . import _api, _odm_query
+from . import _api, _odm_query, _model
 
 
 class Aggregator:
@@ -21,6 +22,24 @@ class Aggregator:
         self._model = model
         self._mock = _api.dispense(model)
         self._pipeline = []
+
+    @property
+    def model(self) -> str:
+        """Get model of the aggregator
+        """
+        return self._model
+
+    @property
+    def mock(self) -> _model.Entity:
+        """Get mock of the aggregator
+        """
+        return self._mock
+
+    @property
+    def pipeline(self) -> list:
+        """Get pipeline of the aggregator
+        """
+        return self._pipeline
 
     def match(self, op: _query.Operator):
         """Add a match stage
@@ -72,17 +91,18 @@ class Aggregator:
 
         return self
 
-    def _compile(self) -> list:
+    def _compile(self) -> _List[_Dict]:
         """Compile pipeline expression
         """
-        r = []
+        return [{stage[0]: stage[1]} for stage in self._pipeline]
 
-        for stage in self._pipeline:
-            r.append({stage[0]: stage[1]})
-
-        return r
-
-    def get(self) -> _List[_Dict]:
-        """Perform aggregation operation.
+    def get(self) -> _CommandCursor:
+        """Perform aggregation operation and get cursor
         """
         return self._mock.collection.aggregate(self._compile())
+
+    def __iter__(self):
+        return self.get()
+
+    def __str__(self) -> str:
+        return str(self._compile())

@@ -4,6 +4,15 @@
 ## Changelog
 
 
+### 3.4 (2018-06-16)
+
+- Properties added to `Aggregator`: `model`, `mock`, `pipeline`.
+- `Aggregator` is iterable now.
+- New `process` argument added to `Result.__init()__`.
+- New `result_processor` argument added to `Finder.__init()__`.
+- Colection names ends with 'y' letter building issue fixed.
+
+
 ### 3.3.1 (2018-06-03)
 
 Finder argument sanitization fixed in some fields.

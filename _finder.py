@@ -4,7 +4,7 @@ __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import List as _List, Tuple as _Tuple, Union as _Union
+from typing import List as _List, Tuple as _Tuple, Union as _Union, Callable as _Callable, Optional as _Optional
 from bson import DBRef as _DBRef
 from pymongo.cursor import Cursor as _Cursor, CursorType as _CursorType
 from pytsite import util as _util, reg as _reg, cache as _cache, logger as _logger
@@ -19,7 +19,8 @@ class Result:
     """Finder Result
     """
 
-    def __init__(self, model: str, cursor: _Cursor = None, ids: list = None):
+    def __init__(self, model: str, cursor: _Cursor = None, ids: list = None,
+                 process: _Callable[[_model.Entity], _model.Entity] = None):
         """Init
         """
         self._model = model
@@ -27,6 +28,7 @@ class Result:
         self._ids = [doc['_id'] for doc in list(cursor)] if cursor else ids
         self._total = len(self._ids)
         self._current = 0
+        self._process = process
 
     @property
     def model(self) -> str:
@@ -48,6 +50,10 @@ class Result:
             raise StopIteration()
 
         entity = _api.dispense(self._model, self._ids[self._current])
+
+        if self._process:
+            entity = self._process(entity)
+
         self._current += 1
 
         return entity
@@ -83,7 +89,8 @@ class Result:
 
 
 class Finder:
-    def __init__(self, model: str, cache_pool: _cache.Pool, limit: int = 0, skip: int = 0):
+    def __init__(self, model: str, cache_pool: _cache.Pool, limit: int = 0, skip: int = 0,
+                 result_processor: _Callable[[_model.Entity], _model.Entity] = None):
         """Init.
         """
         self._model = model
@@ -95,6 +102,7 @@ class Finder:
         self._skip = skip
         self._limit = limit
         self._sort = None
+        self._result_processor = result_processor
 
     @property
     def model(self) -> str:
@@ -117,6 +125,14 @@ class Finder:
         """Get unique finder's ID to use as a cache key, etc
         """
         return _util.md5_hex_digest(str((self._cache_key, self._skip, self._limit, self._sort)))
+
+    @property
+    def result_processor(self) -> _Optional[_Callable[[_model.Entity], _model.Entity]]:
+        return self._result_processor
+
+    @result_processor.setter
+    def result_processor(self, value: _Optional[_Callable[[_model.Entity], _model.Entity]]):
+        self._result_processor = value
 
     @property
     def cache_ttl(self) -> int:
@@ -312,7 +328,7 @@ class Finder:
                 if _DBG:
                     _logger.debug("GET cached query results: query: {}, {}, id: {}, entities: {}.".
                                   format(self.model, query, self.id, len(ids)))
-                return Result(self._model, ids=ids)
+                return Result(self._model, ids=ids, process=self._result_processor)
 
             except _cache.error.KeyNotExist:
                 pass
@@ -327,7 +343,7 @@ class Finder:
         )
 
         # Prepare result
-        result = Result(self._model, cursor)
+        result = Result(self._model, cursor, process=self._result_processor)
 
         # Put query result into cache
         if self._cache_ttl:
