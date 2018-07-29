@@ -387,7 +387,7 @@ class Enum(Abstract):
         super().__init__(name, **kwargs)
 
     def _on_set(self, raw_value, **kwargs):
-        if raw_value is not None and raw_value not in self._values:
+        if raw_value and raw_value not in self._values:
             raise ValueError("Value of the field '{}' can be only one of the following: {}"
                              .format(self.name, self._values))
 

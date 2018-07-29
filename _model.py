@@ -119,12 +119,15 @@ class Entity(_ABC):
         self._is_new = False
         self._is_modified = False
 
-    def define_index(self, definition: _List[_Tuple], unique=False):
+    def define_index(self, definition: _List[_Tuple], unique: bool = False, name: str = None):
         """Define an index.
         """
         opts = {
-            'unique': unique
+            'unique': unique,
         }
+
+        if name:
+            opts['name'] = name
 
         for item in definition:
             if not isinstance(item, tuple):
@@ -763,7 +766,7 @@ class Entity(_ABC):
 
     @classmethod
     def t(cls, partial_msg_id: str, args: dict = None) -> str:
-        """Translate a string in model context.
+        """Translate a string in model context
         """
         return _lang.t(cls.resolve_msg_id(partial_msg_id), args)
 

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.5 (2018-07-29)
+
+New argument `name` added to `Entity.define_index()`.
+
+
 ### 3.4 (2018-06-16)
 
 - Properties added to `Aggregator`: `model`, `mock`, `pipeline`.
