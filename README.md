@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 3.6 (2018-08-28)
+
+- Automatic referenced entities deletion detection added.
+- New exception `InvalidReference` added.
+
+
 ### 3.5 (2018-07-29)
 
 New argument `name` added to `Entity.define_index()`.

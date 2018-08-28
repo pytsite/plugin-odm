@@ -31,6 +31,14 @@ class UnknownCollection(Error):
         return "There is no model registered for collection '{}'".format(self._collection)
 
 
+class InvalidReference(Error):
+    def __init__(self, ref):
+        self._ref = ref
+
+    def __str__(self) -> str:
+        return "Invalid reference: {}".format(self._ref)
+
+
 class ReferencedDocumentNotFound(Error, _errors.NotFound):
     def __init__(self, ref):
         self._ref = ref

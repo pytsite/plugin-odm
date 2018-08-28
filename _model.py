@@ -680,10 +680,26 @@ class Entity(_ABC):
     def delete(self, **kwargs):
         """Delete the entity
         """
+        from . import _api
+
         if self._is_new:
             raise _errors.ForbidDeletion('Non stored entities cannot be deleted')
 
         self._check_is_not_deleted()
+
+        # Search for entities that refers to this entity
+        for model in _api.get_registered_models():
+            mock = _api.dispense(model)
+            for field in mock.fields.values():
+                if isinstance(field, (_field.Ref, _field.ManualRef)) and field.model == self.model:
+                    if _api.find(model).eq(field.name, self).count():
+                        raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
+                            model, self))
+
+                elif isinstance(field, (_field.RefsList, _field.ManualRefsList)) and field.model == self.model:
+                    if _api.find(model).inc(field.name, self).count():
+                        raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
+                            model, self))
 
         # Flag that deletion is in progress
         self._is_being_deleted = True
@@ -709,7 +725,6 @@ class Entity(_ABC):
         }).execute(True)
 
         # Clear finder cache
-        from . import _api
         _api.clear_cache(self._model)
 
         # After delete events and hook. It is important to call them BEFORE entity entity data will be

@@ -102,7 +102,7 @@ def parse_manual_ref(ref: str) -> _List[str]:
         _ObjectId(parts[1])
 
     except (ValueError, TypeError, _bson_errors.InvalidId):
-        raise ValueError('Invalid manual reference format string: {}.'.format(ref))
+        raise _error.InvalidReference(ref)
 
     if not is_model_registered(parts[0]):
         raise _error.ModelNotRegistered(parts[0])
@@ -137,7 +137,7 @@ def resolve_ref(something: _Union[str, _model.Entity, _DBRef, None], implied_mod
 
         return resolve_ref('{}:{}'.format(model, something['uid']))
 
-    raise ValueError("Cannot resolve DB reference from '{}'".format(something))
+    raise _error.InvalidReference(something)
 
 
 def resolve_refs(something: _List, implied_model: str = None) -> _List[_DBRef]:
