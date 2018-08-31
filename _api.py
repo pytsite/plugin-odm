@@ -215,6 +215,9 @@ def reindex(model: str = None):
 def find(model: str, limit: int = 0, skip: int = 0, query: _query.Query = None) -> _finder.Finder:
     """Get finder's instance
     """
+    if not is_model_registered(model):
+        raise _error.ModelNotRegistered(model)
+
     f = _finder.Finder(model, _cache.get_pool('odm.finder.' + model), limit, skip)
 
     if query:

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.6.1 (2018-08-31)
+
+Model checking fixed in `find()`.
+
+
 ### 3.6 (2018-08-28)
 
 - Automatic referenced entities deletion detection added.
