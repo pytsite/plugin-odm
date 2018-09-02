@@ -173,7 +173,7 @@ def resolve_manual_ref(something: _Union[str, _model.Entity, _DBRef]) -> str:
         except KeyError:
             raise _error.UnknownCollection(something.collection)
 
-    raise ValueError("Cannot resolve DB manual reference from '{}'".format(something))
+    raise _error.InvalidReference("Cannot resolve DB manual reference from '{}'".format(something))
 
 
 def resolve_manual_refs(something: _List) -> _List[str]:

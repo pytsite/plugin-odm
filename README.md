@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.6.2 (2018-09-02)
+
+Exception usage fixed.
+
+
 ### 3.6.1 (2018-08-31)
 
 Model checking fixed in `find()`.
