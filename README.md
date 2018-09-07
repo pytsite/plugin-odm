@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 3.7 (2018-09-07)
+
+`strip_html` and `tidyfy_html` properties of the `field.String` are now
+`True` by default.
+
+
 ### 3.6.2 (2018-09-02)
 
 Exception usage fixed.
