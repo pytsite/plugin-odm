@@ -12,7 +12,11 @@ class Error(Exception):
 
 
 class ModelAlreadyRegistered(Error):
-    pass
+    def __init__(self, model: str):
+        self._model = model
+
+    def __str__(self) -> str:
+        return "ODM model '{}' is already registered".format(self._model)
 
 
 class ModelNotRegistered(Error):
@@ -37,14 +41,6 @@ class InvalidReference(Error):
 
     def __str__(self) -> str:
         return "Invalid reference: {}".format(self._ref)
-
-
-class ReferencedDocumentNotFound(Error, _errors.NotFound):
-    def __init__(self, ref):
-        self._ref = ref
-
-    def __str__(self) -> str:
-        return "Referenced document '{}' is not found in the database".format(self._ref)
 
 
 class EntityNotFound(Error, _errors.NotFound):
@@ -84,16 +80,21 @@ class FieldNotDefined(Error):
 
 
 class EntityDeleted(Error):
-    pass
+    def __init__(self, ref: str):
+        super().__init__()
+
+        self._ref = ref
+
+    def __str__(self) -> str:
+        return "Entity '{}' was deleted".format(self._ref)
 
 
-class EntityNotLocked(Error):
-    pass
+class RequiredFieldEmpty(Error):
+    def __init__(self, model: str, field_name: str):
+        super().__init__()
 
+        self._model = model
+        self._field_name = field_name
 
-class FieldEmpty(Error):
-    pass
-
-
-class NoCachedData(Error):
-    pass
+    def __str__(self) -> str:
+        return "Field '{}.{}' cannot be empty".format(self._model, self._field_name)

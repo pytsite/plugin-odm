@@ -31,7 +31,7 @@ def register_model(model: str, cls: _Union[str, _Type[_model.Entity]], replace: 
                         .format(model))
 
     if is_model_registered(model) and not replace:
-        raise _error.ModelAlreadyRegistered("Model '{}' is already registered.".format(model))
+        raise _error.ModelAlreadyRegistered(model)
 
     # Create finder cache pool for each newly registered model
     if not replace:
@@ -78,6 +78,8 @@ def get_model_class(model: str) -> _Type[_model.Entity]:
 
 
 def get_model_collection(model: str) -> _Collection:
+    """Get a collection connected to model
+    """
     try:
         return _MODEL_TO_COLLECTION[model]
     except KeyError:
@@ -90,8 +92,8 @@ def get_registered_models() -> _Tuple[str, ...]:
     return tuple(_MODEL_TO_CLASS.keys())
 
 
-def parse_manual_ref(ref: str) -> _List[str]:
-    """Parse a manual reference string
+def parse_ref_str(ref: str) -> _List[str]:
+    """Parse a reference string
     """
     try:
         parts = ref.split(':')
@@ -110,74 +112,37 @@ def parse_manual_ref(ref: str) -> _List[str]:
     return parts
 
 
-def resolve_ref(something: _Union[str, _model.Entity, _DBRef, None], implied_model: str = None) -> _Optional[_DBRef]:
-    """Resolve DB object reference
+def resolve_ref(something: _Union[None, str, _model.Entity, _DBRef],
+                as_str: bool = True) -> _Optional[_Union[str, _Tuple[str, ...]]]:
+    """Resolve a reference
     """
-    if isinstance(something, _DBRef) or something is None:
-        return something
+    if not something:
+        return None
 
-    elif isinstance(something, _model.Entity):
-        return something.ref
+    model = uid = None
 
-    elif isinstance(something, str):
-        model, uid = parse_manual_ref(something)
-        return _DBRef(dispense(model).collection.name, _ObjectId(uid))
-
-    elif isinstance(something, dict):
-        if 'uid' not in something:
-            raise ValueError('UID must be specified')
-
-        if not implied_model and 'model' not in something:
-            raise ValueError('Model must be specified')
-
-        if 'model' not in something and implied_model == '*':
-            raise ValueError('Model must be specified')
-
-        model = implied_model if implied_model else something['model']
-
-        return resolve_ref('{}:{}'.format(model, something['uid']))
-
-    raise _error.InvalidReference(something)
-
-
-def resolve_refs(something: _List, implied_model: str = None) -> _List[_DBRef]:
-    """Resolve multiple DB objects references
-    """
-    return [resolve_ref(v, implied_model) for v in something]
-
-
-def get_by_ref(ref: _Union[str, _DBRef]) -> _model.Entity:
-    """Dispense entity by DBRef or manual reference
-    """
-    ref = resolve_ref(ref)
-    doc = _db.get_database().dereference(ref)
-
-    if not doc:
-        raise _error.ReferencedDocumentNotFound(ref)
-
-    return dispense(doc['_model'], doc['_id'])
-
-
-def resolve_manual_ref(something: _Union[str, _model.Entity, _DBRef]) -> str:
-    """Resolve manual reference
-    """
     if isinstance(something, str):
-        return '{}:{}'.format(*parse_manual_ref(something))
+        model, uid = parse_ref_str(something)
 
     elif isinstance(something, _model.Entity):
-        return something.manual_ref
+        model, uid = parse_ref_str(something.ref)
 
     elif isinstance(something, _DBRef):
         try:
-            return '{}:{}'.format(_COLLECTION_NAME_TO_MODEL[something.collection], something.id)
+            model, uid = _COLLECTION_NAME_TO_MODEL[something.collection], something.id
         except KeyError:
             raise _error.UnknownCollection(something.collection)
 
-    raise _error.InvalidReference("Cannot resolve DB manual reference from '{}'".format(something))
+    if model and uid:
+        return '{}:{}'.format(model, uid) if as_str else (model, uid)
+    else:
+        raise _error.InvalidReference(something)
 
 
-def resolve_manual_refs(something: _List) -> _List[str]:
-    return [resolve_manual_ref(v) for v in something]
+def resolve_refs(something: _Union[list, tuple]) -> _List[str]:
+    """Resolve multiple references
+    """
+    return [resolve_ref(v) for v in something]
 
 
 def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _model.Entity:
@@ -190,15 +155,13 @@ def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _mode
     if uid in (0, '0'):
         uid = None
 
-    model_class = get_model_class(model)
+    return get_model_class(model)(model, uid)
 
-    # Get an existing entity
-    if uid:
-        return model_class(model, uid)
 
-    # Create a new entity
-    else:
-        return model_class(model)
+def get_by_ref(ref: _Union[None, str, _model.Entity, _DBRef]) -> _model.Entity:
+    """Get entity by reference
+    """
+    return dispense(*resolve_ref(ref, False))
 
 
 def reindex(model: str = None):

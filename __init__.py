@@ -14,9 +14,9 @@ from . import _field as field, _validation as validation, _error as error, _mode
 from ._model import Entity, I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
 from ._finder import Finder, Result
 from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
-    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_cache, resolve_manual_ref, reindex, \
-    on_model_register, on_model_setup_fields, on_model_setup_indexes, on_entity_pre_save, on_entity_save, \
-    on_entity_pre_delete, on_entity_delete, on_cache_clear
+    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_cache, reindex, on_model_register, \
+    on_model_setup_fields, on_model_setup_indexes, on_entity_pre_save, on_entity_save, on_entity_pre_delete, \
+    on_entity_delete, on_cache_clear
 
 
 def plugin_load():
@@ -36,7 +36,24 @@ def plugin_load():
 def plugin_update(v_from: _semver.Version):
     from pytsite import console
 
-    if v_from < '1.4':
+    if v_from < '4.0':
+        # Update all entities that have `Ref` and `RefsList` fields
+        for m in get_registered_models():
+            console.print_info("Processing model '{}'".format(m))
+            fields_to_update = []
+            for f in dispense(m).fields.values():
+                if f.name != '_parent' and isinstance(f, (field.Ref, field.RefsList)):
+                    fields_to_update.append(f.name)
+
+            if fields_to_update:
+                for e in find(m).get():
+                    for f_name in fields_to_update:
+                        e.f_set(f_name, e.f_get(f_name))
+
+                    e.save(update_timestamp=False)
+                    console.print_info('Entity {} updated, fields {}'.format(e, fields_to_update))
+
+    elif v_from < '1.4':
         from pytsite import mongodb
 
         for collection_name in mongodb.get_collection_names():

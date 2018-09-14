@@ -9,10 +9,8 @@ from datetime import datetime as _datetime
 from decimal import Decimal as _Decimal
 from copy import deepcopy as _deepcopy
 from bson.objectid import ObjectId as _ObjectId
-from bson.dbref import DBRef as _bson_DBRef
 from frozendict import frozendict as _frozendict
 from pytsite import lang as _lang, util as _util, validation as _validation, formatters as _formatters
-from . import _error
 
 
 class Abstract:
@@ -399,61 +397,50 @@ class Enum(Abstract):
 
 
 class Ref(Abstract):
-    """Reference Field
+    """Reference List
     """
 
     def __init__(self, name: str, **kwargs):
         """Init
         """
         self._model = kwargs.get('model', '*')
-        self._ignore_missing = kwargs.get('ignore_missing', False)
 
         super().__init__(name, **kwargs)
 
     @property
     def model(self) -> str:
+        """Get model
+        """
         return self._model
 
-    def _on_set(self, raw_value, **kwargs) -> _Optional[_bson_DBRef]:
+    def _on_set(self, raw_value, **kwargs) -> _Optional[str]:
         """Hook
-
-        :type raw_value: odm.model.Entity | _bson_DBRef | str | None
         """
-        if raw_value is None:
+        # Trust any data from database
+        if kwargs.get('from_db'):
+            return raw_value
+
+        if not raw_value:
             return None
 
-        # Get first item from the iterable value
-        if type(raw_value) in (list, tuple):
+        # Get first item from a list or a tuple
+        if isinstance(raw_value, (list, tuple)):
             if len(raw_value):
                 raw_value = raw_value[0]
             else:
                 return None
 
-        # Check type
-        from ._model import Entity
-        if not isinstance(raw_value, (_bson_DBRef, str, Entity)):
-            raise TypeError("Error while setting value of the field '{}': "
-                            "string, DB reference or entity expected, got '{}'.".format(self._name, repr(raw_value)))
+        # Check entity existence
+        from ._api import get_by_ref
+        entity = get_by_ref(raw_value)
 
-        from ._api import resolve_ref
-        ref = resolve_ref(raw_value)
+        # Check entity's model
+        if self._model not in ('*', entity.model):
+            raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
 
-        # Check entity existence, do it only if the data is set NOT from the database, to prevent infinite recursion
-        if not kwargs.get('from_db'):
-            from ._api import get_by_ref
-            try:
-                entity = get_by_ref(ref)
-            except _error.ReferencedDocumentNotFound as e:
-                if self._ignore_missing:
-                    return None
-                raise e
+        return entity.ref
 
-            if self._model != '*' and entity.model != self._model:
-                raise TypeError("Only entities of model '{}' are allowed, got '{}'".format(self._model, entity.model))
-
-        return ref
-
-    def _on_get(self, value, **kwargs):
+    def _on_get(self, value: _Optional[str], **kwargs):
         """Hook
 
         :rtype: _Optional[Entity]
@@ -462,13 +449,7 @@ class Ref(Abstract):
             return None
 
         from ._api import get_by_ref
-        try:
-            return get_by_ref(value)
-
-        except _error.ReferencedDocumentNotFound as e:
-            if self._ignore_missing:
-                return None
-            raise e
+        return get_by_ref(value)
 
     def _on_get_jsonable(self, value, **kwargs):
         """Get serializable representation of the field's value.
@@ -486,86 +467,6 @@ class Ref(Abstract):
         elif isinstance(arg, str):
             from ._api import resolve_ref
             arg = self.sanitize_finder_arg(arg.split(',')) if ',' in arg else resolve_ref(arg)
-
-        elif isinstance(arg, (list, tuple)):
-            clean_arg = []
-            for v in arg:
-                clean_arg.append(self.sanitize_finder_arg(v))
-
-            arg = clean_arg
-
-        return arg
-
-
-class ManualRef(Abstract):
-    """Manual Reference List
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init
-        """
-        self._model = kwargs.get('model', '*')
-        self._ignore_missing = kwargs.get('ignore_missing', False)
-
-        super().__init__(name, **kwargs)
-
-    @property
-    def model(self) -> str:
-        return self._model
-
-    def _on_set(self, raw_value, **kwargs) -> _Optional[str]:
-        """Hook
-        """
-        # Get first item from the iterable value
-        if isinstance(raw_value, (list, tuple)):
-            if len(raw_value):
-                raw_value = raw_value[0]
-            else:
-                return None
-
-        from ._api import resolve_manual_ref
-
-        return resolve_manual_ref(raw_value) if raw_value else None
-
-    def _on_get(self, value: _Optional[str], **kwargs):
-        """Hook
-
-        :rtype: _Optional[Entity]
-        """
-        if value is None:
-            return None
-
-        try:
-            from ._api import find, parse_manual_ref
-
-            ref = parse_manual_ref(value)
-            entity = find(ref[0]).eq('_id', ref[1]).first()
-
-            if not entity:
-                raise _error.ReferencedDocumentNotFound(value)
-
-            return entity
-
-        except (_error.ModelNotRegistered, _error.ReferencedDocumentNotFound) as e:
-            if not self._ignore_missing:
-                raise e
-
-    def _on_get_jsonable(self, value, **kwargs):
-        """Get serializable representation of the field's value.
-        """
-        return '_ref:{}:{}'.format(value.collection, value.id) if value else None
-
-    def sanitize_finder_arg(self, arg):
-        """Hook. Used for sanitizing Finder's query argument.
-        """
-        from . import _model
-
-        if isinstance(arg, _model.Entity):
-            arg = arg.manual_ref
-
-        elif isinstance(arg, str):
-            from ._api import resolve_manual_ref
-            arg = self.sanitize_finder_arg(arg.split(',')) if ',' in arg else resolve_manual_ref(arg)
 
         elif isinstance(arg, (dict, set, list, tuple)):
             clean_arg = []
@@ -585,58 +486,49 @@ class RefsList(List):
         """Init.
         """
         from ._model import Entity
+
         self._model = kwargs.get('model', '*')
-        self._ignore_missing = kwargs.get('ignore_missing', False)
 
         super().__init__(name, allowed_types=(Entity,), **kwargs)
 
     @property
     def model(self) -> str:
+        """Get model
+        """
         return self._model
 
-    def _on_set(self, raw_value, **kwargs) -> _List[_bson_DBRef]:
+    def _on_set(self, raw_value, **kwargs) -> _List[str]:
         """Set value of the field
         """
+        # Trust all data from database
+        if kwargs.get('from_db'):
+            return raw_value
+
         if raw_value is None:
             return []
 
-        from ._model import Entity
         if not isinstance(raw_value, (list, tuple)):
             raise TypeError(
                 "List or tuple expected as a value of the field '{}', got '{}'".format(self._name, repr(raw_value)))
 
+        from ._api import get_by_ref
+
         # Check value
         r = []
-        for item in raw_value:
-            if isinstance(item, _bson_DBRef):
-                pass
-            elif isinstance(item, Entity):
-                item = item.ref
-            else:
-                raise TypeError("Field '{}': list of entities or DBRefs expected. Got: {}".
-                                format(self.name, repr(raw_value)))
+        for v in raw_value:
+            # Check entity existence
+            entity = get_by_ref(v)
 
-            # Check model, do it only if the data is set NOT from the database, to prevent infinite recursion
-            if not kwargs.get('from_db') and self._model != '*':
-                from ._api import get_by_ref
+            # Check entity's model
+            if self._model not in ('*', entity.model):
+                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
 
-                try:
-                    entity = get_by_ref(item)
-                except _error.ReferencedDocumentNotFound as e:
-                    if self._ignore_missing:
-                        continue
-                    raise e
-
-                if entity.model != self._model:
-                    raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                    .format(self._model, entity.model))
-
-            if not self._unique or (self._unique and item not in r):
-                r.append(item)
+            if not self._unique or (self._unique and entity.ref not in r):
+                r.append(entity.ref)
 
         return r
 
-    def _on_get(self, value: _List[_bson_DBRef], **kwargs):
+    def _on_get(self, value: _List[str], **kwargs):
         """Get value of the field
 
         :rtype: _List[odm.model.Entity, ...]
@@ -644,13 +536,8 @@ class RefsList(List):
         from ._api import get_by_ref
 
         r = []
-        for dbref in value:
-            try:
-                r.append(get_by_ref(dbref))
-            except _error.ReferencedDocumentNotFound as exc:
-                if self._ignore_missing:
-                    continue
-                raise exc
+        for ref in value:
+            r.append(get_by_ref(ref))
 
         sort_by = kwargs.get('sort_by')
         if sort_by:
@@ -664,13 +551,13 @@ class RefsList(List):
 
     def _on_add(self, current_value: list, raw_value_to_add, **kwargs):
         """Add a value to the field
+
         """
         from ._model import Entity
 
         if isinstance(raw_value_to_add, Entity):
-            if self._model != '*' and raw_value_to_add.model != self._model:
-                raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                .format(self._model, raw_value_to_add.model))
+            if self._model not in ('*', raw_value_to_add.model):
+                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_add.model))
         else:
             raise TypeError("Entity expected, got '{}'".format(type(raw_value_to_add)))
 
@@ -682,9 +569,8 @@ class RefsList(List):
         from ._model import Entity
 
         if isinstance(raw_value_to_sub, Entity):
-            if self._model != '*' and raw_value_to_sub.model != self._model:
-                raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                .format(self._model, raw_value_to_sub.model))
+            if self._model not in ('*', raw_value_to_sub.model):
+                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_sub.model))
         else:
             raise TypeError("Entity expected")
 
@@ -699,134 +585,6 @@ class RefsList(List):
 
 
 class RefsUniqueList(RefsList):
-    """Unique list of DBRefs field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init
-        """
-        super().__init__(name, unique=True, **kwargs)
-
-
-class ManualRefsList(List):
-    """List of References Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init.
-        """
-        from ._model import Entity
-
-        self._model = kwargs.get('model', '*')
-        self._ignore_missing = kwargs.get('ignore_missing', False)
-
-        super().__init__(name, allowed_types=(Entity,), **kwargs)
-
-    @property
-    def model(self) -> str:
-        return self._model
-
-    def _on_set(self, raw_value, **kwargs) -> _List[str]:
-        """Set value of the field
-        """
-        if raw_value is None:
-            return []
-
-        from ._api import resolve_manual_ref
-
-        if not isinstance(raw_value, (list, tuple)):
-            raise TypeError(
-                "List or tuple expected as a value of the field '{}', got '{}'".format(self._name, repr(raw_value)))
-
-        # Check value
-        r = []
-        for item in raw_value:
-            item = resolve_manual_ref(item)
-
-            # Check model, do it only if the data is set NOT from the database, to prevent infinite recursion
-            if not kwargs.get('from_db') and self._model != '*':
-                from ._api import get_by_ref
-
-                try:
-                    entity = get_by_ref(item)
-                except _error.ReferencedDocumentNotFound as e:
-                    if self._ignore_missing:
-                        continue
-                    raise e
-
-                if entity.model != self._model:
-                    raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                    .format(self._model, entity.model))
-
-            if not self._unique or (self._unique and item not in r):
-                r.append(item)
-
-        return r
-
-    def _on_get(self, value: _List[_bson_DBRef], **kwargs):
-        """Get value of the field
-
-        :rtype: _List[odm.model.Entity, ...]
-        """
-        from ._api import get_by_ref
-
-        r = []
-        for dbref in value:
-            try:
-                r.append(get_by_ref(dbref))
-            except _error.ReferencedDocumentNotFound as e:
-                if self._ignore_missing:
-                    continue
-                raise e
-
-        sort_by = kwargs.get('sort_by')
-        if sort_by:
-            r = sorted(r, key=lambda e: e.f_get(sort_by), reverse=kwargs.get('sort_reverse', False))
-
-        limit = kwargs.get('limit')
-        if limit is not None:
-            r = r[:limit]
-
-        return r
-
-    def _on_add(self, current_value: list, raw_value_to_add, **kwargs):
-        """Add a value to the field
-
-        """
-        from ._model import Entity
-
-        if isinstance(raw_value_to_add, Entity):
-            if self._model != '*' and raw_value_to_add.model != self._model:
-                raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                .format(self._model, raw_value_to_add.model))
-        else:
-            raise TypeError("Entity expected, got '{}'".format(type(raw_value_to_add)))
-
-        return super()._on_add(current_value, raw_value_to_add, **kwargs)
-
-    def _on_sub(self, current_value: list, raw_value_to_sub, **kwargs):
-        """Subtract value fom the field.
-        """
-        from ._model import Entity
-
-        if isinstance(raw_value_to_sub, Entity):
-            if self._model != '*' and raw_value_to_sub.model != self._model:
-                raise TypeError("Only entities of model '{}' are allowed, got '{}'"
-                                .format(self._model, raw_value_to_sub.model))
-        else:
-            raise TypeError("Entity expected")
-
-        return super()._on_sub(current_value, raw_value_to_sub, **kwargs)
-
-    def sanitize_finder_arg(self, arg):
-        """Hook. Used for sanitizing Finder's query argument.
-        """
-        from ._api import resolve_manual_refs
-
-        return resolve_manual_refs(arg if isinstance(arg, (list, tuple)) else (arg,))
-
-
-class ManualRefsUniqueList(ManualRefsList):
     """Unique list of manual references field
     """
 
@@ -1123,7 +881,6 @@ class Decimal(Abstract):
             return [float(v) for v in arg]
         else:
             return float(arg)
-
 
 
 class Bool(Abstract):

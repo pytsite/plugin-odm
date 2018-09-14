@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 4.0 (2018-09-14)
+
+- DBRefs removed in favour of manual refs.
+- `error` module cleaned up.
+
+
 ### 3.7 (2018-09-07)
 
 `strip_html` and `tidyfy_html` properties of the `field.String` are now

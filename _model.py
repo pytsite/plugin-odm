@@ -10,7 +10,6 @@ from collections import OrderedDict as _OrderedDict
 from datetime import datetime as _datetime
 from pymongo import ASCENDING as I_ASC, DESCENDING as I_DESC, GEO2D as I_GEO2D, TEXT as I_TEXT, GEOSPHERE as I_GEOSPHERE
 from bson.objectid import ObjectId as _ObjectId
-from bson.dbref import DBRef as _DBRef
 from pymongo.collection import Collection as _Collection
 from pymongo.errors import OperationFailure as _OperationFailure
 from pytsite import mongodb as _db, events as _events, lang as _lang, errors as _errors, cache as _cache, reg as _reg
@@ -55,7 +54,7 @@ class Entity(_ABC):
         self.define_field(_field.ObjectId('_id', required=True))
         self.define_field(_field.String('_ref', required=True))
         self.define_field(_field.String('_model', required=True, default=self._model))
-        self.define_field(_field.ManualRef('_parent', model=model))
+        self.define_field(_field.Ref('_parent', model=model))
         self.define_field(_field.Integer('_depth', required=True, default=0))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
@@ -217,7 +216,7 @@ class Entity(_ABC):
         """Raise an exception if the entity has 'deleted' state.
         """
         if self._is_deleted:
-            raise _error.EntityDeleted("Entity '{}' has been deleted.".format(self.manual_ref))
+            raise _error.EntityDeleted(self.ref)
 
     def has_field(self, field_name: str) -> bool:
         """Check if the entity has a field.
@@ -251,18 +250,7 @@ class Entity(_ABC):
         return self.f_get('_id')
 
     @property
-    def ref(self) -> _DBRef:
-        """Get entity's DBRef.
-        """
-        self._check_is_not_deleted()
-
-        if self._is_new:
-            raise _error.EntityNotStored(self._model)
-
-        return _DBRef(self.collection.name, self.id)
-
-    @property
-    def manual_ref(self) -> str:
+    def ref(self) -> str:
         if not self.id:
             raise _error.EntityNotStored(self._model)
 
@@ -691,12 +679,12 @@ class Entity(_ABC):
         for model in _api.get_registered_models():
             mock = _api.dispense(model)
             for field in mock.fields.values():
-                if isinstance(field, (_field.Ref, _field.ManualRef)) and field.model == self.model:
+                if isinstance(field, _field.Ref) and field.model == self.model:
                     if _api.find(model).eq(field.name, self).count():
                         raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
                             model, self))
 
-                elif isinstance(field, (_field.RefsList, _field.ManualRefsList)) and field.model == self.model:
+                elif isinstance(field, _field.RefsList) and field.model == self.model:
                     if _api.find(model).inc(field.name, self).count():
                         raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
                             model, self))
@@ -760,7 +748,7 @@ class Entity(_ABC):
 
             # Required fields should be filled
             if check_required_fields and f.required and f.is_empty:
-                raise _error.FieldEmpty("Value of the field '{}.{}' cannot be empty".format(self._model, f_name))
+                raise _error.RequiredFieldEmpty(self._model, f_name)
 
             r[f_name] = f.get_storable_val()
 
@@ -805,14 +793,12 @@ class Entity(_ABC):
     def __str__(self):
         """__str__ overloading.
         """
-        return self.manual_ref
+        return self.ref
 
     def __eq__(self, other) -> bool:
         """__eq__ overloading
         """
-        if isinstance(other, _DBRef):
-            return self.ref == other
-        elif hasattr(other, 'manual_ref'):
-            return self.manual_ref == other.manual_ref
+        if hasattr(other, 'ref'):
+            return self.ref == other.ref
 
         return False
