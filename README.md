@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 4.0.2 (2018-09-19)
+
+`get_by_ref()` fixed.
+
+
 ### 4.0.1 (2018-09-17)
 
 `get_by_ref()` fixed.

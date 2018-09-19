@@ -158,9 +158,12 @@ def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _mode
     return get_model_class(model)(model, uid)
 
 
-def get_by_ref(ref: _Union[None, str, _model.Entity, _DBRef]) -> _model.Entity:
+def get_by_ref(ref: _Union[None, str, _model.Entity, _DBRef]) -> _Optional[_model.Entity]:
     """Get entity by reference
     """
+    if not ref:
+        return None
+
     return ref if isinstance(ref, _model.Entity) else dispense(*resolve_ref(ref, False))
 
 
