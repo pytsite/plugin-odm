@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 4.1 (2018-09-21)
+
+New argument `force` in `Entity.delete()`.
+
+
 ### 4.0.3 (2018-09-21)
 
 `get_by_ref()` fixed.

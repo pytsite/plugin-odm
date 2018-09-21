@@ -676,18 +676,20 @@ class Entity(_ABC):
         self._check_is_not_deleted()
 
         # Search for entities that refers to this entity
-        for model in _api.get_registered_models():
-            mock = _api.dispense(model)
-            for field in mock.fields.values():
-                if isinstance(field, _field.Ref) and field.model == self.model:
-                    if _api.find(model).eq(field.name, self).count():
-                        raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
-                            model, self))
+        if not kwargs.get('force'):
+            for model in _api.get_registered_models():
+                for field in _api.dispense(model).fields.values():
+                    f = _api.find(model)
+                    if isinstance(field, _field.Ref) and field.model == self.model:
+                        f.eq(field.name, self)
+                    elif isinstance(field, _field.RefsList) and field.model == self.model:
+                        f.inc(field.name, self)
+                    else:
+                        continue
 
-                elif isinstance(field, _field.RefsList) and field.model == self.model:
-                    if _api.find(model).inc(field.name, self).count():
-                        raise _errors.ForbidDeletion("There is an entity of model '{}' which refers to the {}".format(
-                            model, self))
+                    e = f.first()
+                    if e:
+                        raise _errors.ForbidDeletion("{}.{} refers to the {}".format(e, field.name, self))
 
         # Flag that deletion is in progress
         self._is_being_deleted = True
