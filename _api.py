@@ -161,10 +161,7 @@ def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _mode
 def get_by_ref(ref: _Union[None, str, _model.Entity, _DBRef]) -> _Optional[_model.Entity]:
     """Get entity by reference
     """
-    if not ref:
-        return None
-
-    return ref if isinstance(ref, _model.Entity) else dispense(*resolve_ref(ref, False))
+    return dispense(*resolve_ref(ref, False)) if ref else None
 
 
 def reindex(model: str = None):
