@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.0 (2018-09-21)
+
+Support of `pytsite-8.x`.
+
+
 ### 4.1 (2018-09-21)
 
 New argument `force` in `Entity.delete()`.

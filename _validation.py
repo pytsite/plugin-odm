@@ -5,7 +5,7 @@ from bson.objectid import ObjectId as _ObjectId
 from pytsite import validation as _pytsite_validation
 from . import _api, _model
 
-__author__ = 'Alexander Shepetko'
+__author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 

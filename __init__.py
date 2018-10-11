@@ -1,6 +1,6 @@
 """PytSite ODM Plugin
 """
-__author__ = 'Alexander Shepetko'
+__author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
@@ -20,11 +20,8 @@ from ._api import register_model, unregister_model, is_model_registered, get_mod
 
 
 def plugin_load():
-    from pytsite import console, lang, events
+    from pytsite import console, events
     from . import _cc, _eh
-
-    # Resources
-    lang.register_package(__name__)
 
     # Console commands
     console.register_command(_cc.Reindex())
