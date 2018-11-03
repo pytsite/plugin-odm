@@ -764,43 +764,47 @@ class Entity(_ABC):
         }
 
     @classmethod
-    def get_package_name(cls) -> str:
-        """Get instance's package name.
+    def package_name(cls) -> str:
+        """Get package name of the object class
         """
         return '.'.join(cls.__module__.split('.')[:-1])
+
+    @classmethod
+    def lang_package_name(cls) -> str:
+        """Get lang's package name to use in t() and t_plural() methods
+        """
+        return cls.package_name()
+
+    @classmethod
+    def resolve_lang_msg_id(cls, partial_msg_id: str) -> str:
+        # Searching for translation up in hierarchy
+        for super_cls in cls.__mro__:
+            if hasattr(super_cls, 'package_name') and callable(super_cls.package_name):
+                full_msg_id = super_cls.package_name() + '@' + partial_msg_id
+                if _lang.is_translation_defined(full_msg_id):
+                    return full_msg_id
+
+        return cls.lang_package_name() + '@' + partial_msg_id
 
     @classmethod
     def t(cls, partial_msg_id: str, args: dict = None) -> str:
         """Translate a string in model context
         """
-        return _lang.t(cls.resolve_msg_id(partial_msg_id), args)
+        return _lang.t(cls.resolve_lang_msg_id(partial_msg_id), args)
 
     @classmethod
     def t_plural(cls, partial_msg_id: str, num: int = 2) -> str:
         """Translate a string into plural form.
         """
-        return _lang.t_plural(cls.resolve_msg_id(partial_msg_id), num)
-
-    @classmethod
-    def resolve_msg_id(cls, partly_msg_id: str) -> str:
-        # Searching for translation up in hierarchy
-        for super_cls in cls.__mro__:
-            if issubclass(super_cls, Entity):
-                full_msg_id = super_cls.get_package_name() + '@' + partly_msg_id
-                if _lang.is_translation_defined(full_msg_id):
-                    return full_msg_id
-
-        return cls.get_package_name() + '@' + partly_msg_id
+        return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
 
     def __str__(self):
-        """__str__ overloading.
+        """__str__ overloading
         """
         return self.ref
 
     def __eq__(self, other) -> bool:
         """__eq__ overloading
         """
-        if hasattr(other, 'ref'):
-            return self.ref == other.ref
 
-        return False
+        return hasattr(other, 'ref') and self.ref == other.ref

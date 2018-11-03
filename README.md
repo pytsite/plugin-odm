@@ -4,6 +4,14 @@
 ## Changelog
 
 
+### 5.1 (2018-11-03)
+
+- New method `Entity.lang_package_name()` added.
+- `Entity.get_package_name()` renamed to `package_name()`.
+- `Entity.resolve_msg_id()` renamed to `resolve_lang_msg_id()`.
+
+
+
 ### 5.0 (2018-09-21)
 
 Support of `pytsite-8.x`.
