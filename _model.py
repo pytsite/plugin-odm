@@ -701,7 +701,7 @@ class Entity(_ABC):
 
         # Notify each field about entity deletion
         for f_name, field in self._fields.items():
-            field.on_entity_delete()
+            field.entity_delete(self)
 
         # Clear parent reference from orphaned children
         for child in self.children:

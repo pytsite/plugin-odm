@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 5.2 (2018-11-05)
+
+- `field.Abstract.on_entity_delete()` made private and got `entity`
+  parameter.
+
+
 ### 5.1 (2018-11-03)
 
 - New method `Entity.lang_package_name()` added.

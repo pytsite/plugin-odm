@@ -146,10 +146,19 @@ class Abstract:
         """
         return self.set_val(self._value - self._on_dec(**kwargs), **kwargs)
 
-    def on_entity_delete(self):
-        """Hook method to provide for fields notification mechanism about entity deletion.
+    def _on_entity_delete(self, entity):
+        """Hook
+
+        :type entity: plugins.odm.Entity
         """
         pass
+
+    def entity_delete(self, entity):
+        """Hook method to provide notification mechanism about entity deletion
+
+        :type entity: plugins.odm.Entity
+        """
+        self._on_entity_delete(entity)
 
     def sanitize_finder_arg(self, arg):
         """Hook used for sanitizing Finder's query argument
