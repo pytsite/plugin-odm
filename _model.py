@@ -98,13 +98,13 @@ class Entity(_ABC):
 
         # Fill fields with values from loaded data
         for f_name, f_value in data.items():
-            field = self.get_field(f_name)
-
-            # Fields that must not be overwritten
-            if f_name == '_model' or not field.storable:
-                continue
-
             try:
+                field = self.get_field(f_name)
+
+                # Fields that must not be overwritten
+                if f_name == '_model' or not field.storable:
+                    continue
+
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
                 field.set_val(f_value, from_db=True)
             except _error.FieldNotDefined:

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.3.1 (2018-11-07)
+
+Entity DB data lading issue fixed.
+
+
 ### 5.3 (2018-11-07)
 
 New attribute `storable` added to the `field.Abstract`.
