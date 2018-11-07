@@ -18,15 +18,21 @@ class Abstract:
     """
 
     def __init__(self, name: str, **kwargs):
-        """Init.
+        """Init
 
-        :param default:
+        :param storable: bool
         :param required: bool
+        :param default
         """
         self._name = name
+        self._storable = kwargs.get('storable', True)
         self._required = kwargs.get('required', False)
         self._default = kwargs.get('default')
         self._value = self._on_set(self._default, init=True) if self._default is not None else self._default
+
+    @property
+    def storable(self) -> bool:
+        return self._storable
 
     @property
     def required(self) -> bool:
@@ -174,7 +180,9 @@ class Abstract:
 class Virtual(Abstract):
     """Virtual Field
     """
-    pass
+
+    def __init__(self, name: str, **kwargs):
+        super().__init__(name, storable=False, **kwargs)
 
 
 class ObjectId(Abstract):

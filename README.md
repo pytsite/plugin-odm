@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.3 (2018-11-07)
+
+New attribute `storable` added to the `field.Abstract`.
+
+
 ### 5.2 (2018-11-05)
 
 - `field.Abstract.on_entity_delete()` made private and got `entity`

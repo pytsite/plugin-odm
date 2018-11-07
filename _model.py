@@ -98,12 +98,13 @@ class Entity(_ABC):
 
         # Fill fields with values from loaded data
         for f_name, f_value in data.items():
-            # Model should not be overwritten
-            if f_name == '_model':
+            field = self.get_field(f_name)
+
+            # Fields that must not be overwritten
+            if f_name == '_model' or not field.storable:
                 continue
 
             try:
-                field = self.get_field(f_name)
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
                 field.set_val(f_value, from_db=True)
             except _error.FieldNotDefined:
@@ -744,8 +745,8 @@ class Entity(_ABC):
         r = {}
 
         for f_name, f in self.fields.items():
-            # Virtual fields don't store values in the database
-            if isinstance(f, _field.Virtual):
+            # Check if the field is storable
+            if not f.storable:
                 continue
 
             # Required fields should be filled
