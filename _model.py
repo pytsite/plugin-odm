@@ -382,11 +382,7 @@ class Entity(_ABC):
         """
         field = self.get_field(field_name)
 
-        hooked_val = self._on_f_set(field_name, value, **kwargs)
-        if value is not None and hooked_val is None:
-            raise RuntimeWarning("_on_f_set() for field '{}.{}' returned None".format(self._model, field_name))
-
-        field.set_val(hooked_val, **kwargs)
+        field.set_val(self._on_f_set(field_name, value, **kwargs), **kwargs)
 
         # Check relations
         if field_name == '_parent':
@@ -606,6 +602,12 @@ class Entity(_ABC):
         # Don't save entity if it wasn't changed
         if not (self._is_modified or kwargs.get('force')):
             return self
+
+        # Shortcut
+        if kwargs.get('fast'):
+            kwargs['update_timestamp'] = False
+            kwargs['pre_hooks'] = False
+            kwargs['after_hooks'] = False
 
         # Update timestamp
         if kwargs.get('update_timestamp', True):

@@ -4,9 +4,14 @@
 ## Changelog
 
 
+### 5.4 (2018-11-25)
+
+New kwarg `fast` added to `Entity.save()`.
+
+
 ### 5.3.1 (2018-11-07)
 
-Entity DB data lading issue fixed.
+Entity DB data loading issue fixed.
 
 
 ### 5.3 (2018-11-07)
