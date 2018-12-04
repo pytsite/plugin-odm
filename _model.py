@@ -760,11 +760,18 @@ class Entity(_ABC):
         return r
 
     def as_jsonable(self, **kwargs) -> _Dict:
-        """Get JSONable dictionary representation of the entity.
+        """Get JSONable dictionary representation of the entity
         """
         return {
-            'uid': str(self.id),
+            '_ref': str(self.ref),
         }
+
+    @classmethod
+    def http_api_finder(cls, finder, **kwargs):
+        pass
+
+    def http_api_get(self, **kwargs):
+        return self.as_jsonable(**kwargs)
 
     @classmethod
     def package_name(cls) -> str:

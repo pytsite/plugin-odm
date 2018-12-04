@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.5 (2018-12-04)
+
+`http_api_finder()` and `http_api_get()` implemented in `Entity`.
+
+
 ### 5.4 (2018-11-25)
 
 New kwarg `fast` added to `Entity.save()`.
