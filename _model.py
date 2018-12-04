@@ -762,13 +762,11 @@ class Entity(_ABC):
     def as_jsonable(self, **kwargs) -> _Dict:
         """Get JSONable dictionary representation of the entity
         """
-        return {
-            '_ref': str(self.ref),
-        }
+        return {'ref': self.ref}
 
     @classmethod
     def http_api_finder(cls, finder, **kwargs):
-        pass
+        raise _errors.ForbidOperation()
 
     def http_api_get(self, **kwargs):
         return self.as_jsonable(**kwargs)

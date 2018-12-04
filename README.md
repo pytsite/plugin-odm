@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.5.1 (2018-12-04)
+
+`Entity.http_api_finder()` forbids operation by default.
+
+
 ### 5.5 (2018-12-04)
 
 `http_api_finder()` and `http_api_get()` implemented in `Entity`.
