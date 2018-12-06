@@ -765,13 +765,6 @@ class Entity(_ABC):
         return {'ref': self.ref}
 
     @classmethod
-    def http_api_finder(cls, finder, **kwargs):
-        raise _errors.ForbidOperation()
-
-    def http_api_get(self, **kwargs):
-        return self.as_jsonable(**kwargs)
-
-    @classmethod
     def package_name(cls) -> str:
         """Get package name of the object class
         """

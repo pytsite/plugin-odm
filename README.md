@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.6 (2018-12-06)
+
+`Entity.http_api_*` hooks removed.
+
+
 ### 5.5.1 (2018-12-04)
 
 `Entity.http_api_finder()` forbids operation by default.
