@@ -31,7 +31,8 @@ def _entity_save(args: dict):
             collection.replace_one({'_id': fields_data['_id']}, fields_data)
 
         # Update cache
-        _ENTITIES_CACHE.put('{}.{}'.format(fields_data['_model'], fields_data['_id']), fields_data, _CACHE_TTL)
+        c_key = '{}.{}'.format(fields_data['_model'], fields_data['_id'])
+        _ENTITIES_CACHE.put_hash(c_key, fields_data, _CACHE_TTL)
 
     except (_bson_errors.BSONError, _pymonog_errors.PyMongoError) as e:
         _logger.error(e)

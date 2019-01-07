@@ -14,14 +14,13 @@ class ODMQuery(_query.Query):
     """Query
     """
 
-    def __init__(self, entity_mock: _model.Entity, ops: _Union[_query.Operator, _Iterator[_query.Operator]] = None,
-                 query: _query.Query = None):
+    def __init__(self, entity_mock: _model.Entity, ops: _Union[_query.Operator, _Iterator[_query.Operator]] = None):
         """Init
         """
         # Mock entity to determine field types, etc
         self._entity_mock = entity_mock
 
-        super().__init__(ops, query)
+        super().__init__(ops)
 
     @classmethod
     def _sanitize_object_ids(cls, ids: _Union[str, list, tuple]) -> _Union[_ObjectId, list]:

@@ -12,9 +12,9 @@ _cache.create_pool('odm.entities')
 # Public API
 from . import _field as field, _validation as validation, _error as error, _model as model
 from ._model import Entity, I_ASC, I_DESC, I_TEXT, I_GEO2D, I_GEOSPHERE
-from ._finder import Finder, Result
+from ._finder import Finder, SingleModelFinder, MultiModelFinder, SingleModelResult, MultiModelResult
 from ._api import register_model, unregister_model, is_model_registered, get_model_class, get_registered_models, \
-    resolve_ref, resolve_refs, get_by_ref, dispense, find, aggregate, clear_cache, reindex, on_model_register, \
+    resolve_ref, resolve_refs, get_by_ref, dispense, find, mfind, aggregate, clear_cache, reindex, on_model_register, \
     on_model_setup_fields, on_model_setup_indexes, on_entity_pre_save, on_entity_save, on_entity_pre_delete, \
     on_entity_delete, on_cache_clear
 

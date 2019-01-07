@@ -4,6 +4,16 @@
 ## Changelog
 
 
+### 5.7 (2018-12-06)
+
+- Support of `pytsite-8.8` and `query-1.1`.
+- New `mfind()` API function.
+- `Finder` class separated in two classes: `SingleModelFinder` and
+  `MultiModelFinder`.
+- Support for multiple `model` arg's value in `field.Ref`.
+- Finders result caching strategy improved.
+
+
 ### 5.6 (2018-12-06)
 
 `Entity.http_api_*` hooks removed.

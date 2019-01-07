@@ -4,7 +4,8 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional, Iterable as _Iterable
+from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional, Iterable as _Iterable, \
+    Type as _Type
 from datetime import datetime as _datetime
 from decimal import Decimal as _Decimal
 from copy import deepcopy as _deepcopy
@@ -421,6 +422,7 @@ class Ref(Abstract):
         """Init
         """
         self._model = kwargs.get('model', '*')
+        self._model_cls = kwargs.get('model_cls')  # type: _Optional[_Type]
 
         super().__init__(name, **kwargs)
 
@@ -454,6 +456,10 @@ class Ref(Abstract):
         # Check entity's model
         if self._model not in ('*', entity.model):
             raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
+
+        # Check entity's class
+        if self._model_cls and not isinstance(entity, self._model_cls):
+            raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
 
         return entity.ref
 

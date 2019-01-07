@@ -76,6 +76,8 @@ class Entity(_ABC):
 
     @classmethod
     def on_register(cls, model: str):
+        """Called when model is being registered by odm.register_model()
+        """
         pass
 
     def _load_fields_data(self, eid: _ObjectId):
@@ -85,7 +87,7 @@ class Entity(_ABC):
 
         # Try to load entity data from cache
         try:
-            data = _CACHE_POOL.get(cache_key)
+            data = _CACHE_POOL.get_hash(cache_key)
 
         # Get entity data from database
         except _cache.error.KeyNotExist:
@@ -94,7 +96,7 @@ class Entity(_ABC):
                 raise _error.EntityNotFound(self._model, str(eid))
 
             # Put loaded data into the cache
-            _CACHE_POOL.put(cache_key, data, _CACHE_TTL)
+            _CACHE_POOL.put_hash(cache_key, data, _CACHE_TTL)
 
         # Fill fields with values from loaded data
         for f_name, f_value in data.items():

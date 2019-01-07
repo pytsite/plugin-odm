@@ -145,17 +145,13 @@ def resolve_refs(something: _Union[list, tuple]) -> _List[str]:
     return [resolve_ref(v) for v in something]
 
 
-def dispense(model: str, uid: _Union[int, str, _ObjectId, None] = None) -> _model.Entity:
+def dispense(model: str, eid: _Union[int, str, _ObjectId, None] = None) -> _model.Entity:
     """Dispense an entity
     """
     if not is_model_registered(model):
         raise _error.ModelNotRegistered(model)
 
-    # Sanitize entity ID
-    if uid in (0, '0'):
-        uid = None
-
-    return get_model_class(model)(model, uid)
+    return get_model_class(model)(model, None if eid in (0, '0') else eid)
 
 
 def get_by_ref(ref: _Union[None, str, _model.Entity, _DBRef]) -> _Optional[_model.Entity]:
@@ -175,19 +171,14 @@ def reindex(model: str = None):
             reindex(model)
 
 
-def find(model: str, limit: int = 0, skip: int = 0, query: _query.Query = None) -> _finder.Finder:
+def find(model: _Union[str, _List[str]], query: _query.Query = None) -> _finder.SingleModelFinder:
     """Get finder's instance
     """
-    if not is_model_registered(model):
-        raise _error.ModelNotRegistered(model)
+    return _finder.SingleModelFinder(model, query)
 
-    f = _finder.Finder(model, _cache.get_pool('odm.finder.' + model), limit, skip)
 
-    if query:
-        for op in query:
-            f.add(op)
-
-    return f
+def mfind(models: _List[str], query: _query.Query = None) -> _finder.MultiModelFinder:
+    return _finder.MultiModelFinder(models, query)
 
 
 def aggregate(model: str):
