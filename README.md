@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.8 (2018-12-09)
+
+New `Finder.rm()` method added.
+
+
 ### 5.7 (2018-12-06)
 
 - Support of `pytsite-8.8` and `query-1.1`.

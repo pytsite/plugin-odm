@@ -205,6 +205,24 @@ class Finder(_ABC):
 
         return self
 
+    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+        """Remove all operator that use specified field
+        """
+        if _root is None:
+            _root = self._query
+
+        ops_to_del = []
+        for i, op in enumerate(_root):
+            if isinstance(op, _query.LogicalOperator):
+                self.rm(field, cache, op)
+            elif isinstance(op, _query.FieldOperator) and op.field == field:
+                ops_to_del.append(i)
+
+        for i in ops_to_del:
+            del _root[i]
+
+        return self
+
     def eq(self, field: str, arg, cache: bool = True):
         """Shortcut
         """
@@ -404,6 +422,14 @@ class SingleModelFinder(Finder):
         """
         return self._mock
 
+    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+        """Remove all operator that use specified field
+        """
+        if not self._mock.has_field(field):
+            raise _error.FieldNotDefined(self._model, field)
+
+        return super().rm(field, cache, _root)
+
     def distinct(self, field: str) -> list:
         """Get a list of distinct values for field among all documents in the collection
         """
@@ -489,14 +515,22 @@ class MultiModelFinder(Finder):
         """
         super().__init__(query)
 
-        self._finders = {model: SingleModelFinder(model, query) for model in models}
+        self._finders = [SingleModelFinder(model, query) for model in models]
 
     def add(self, op: _query.Operator, cache: bool = True):
         """Add a query criteria
         """
         # Add operator to every finder
-        for f in self._finders.values():
+        for f in self._finders:
             f.add(op, cache)
+
+        return self
+
+    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+        """Remove all operator that use specified field
+        """
+        for f in self._finders:
+            f.rm(field, cache)
 
         return self
 
@@ -508,4 +542,4 @@ class MultiModelFinder(Finder):
     def get(self, limit: int = 0) -> MultiModelResult:
         """Get result
         """
-        return MultiModelResult([f.skip(self._skip).get(limit) for f in self._finders.values()], limit)
+        return MultiModelResult([f.skip(self._skip).get(limit) for f in self._finders], limit)
