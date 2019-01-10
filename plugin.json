@@ -1,6 +1,6 @@
 {
   "name": "odm",
-  "version": "5.8.1",
+  "version": "5.9",
   "description": {
     "en": "Object Document Mapper",
     "ru": "Object Document Mapper",
@@ -15,7 +15,7 @@
   "requires": {
     "pytsite": ">=8.8",
     "plugins": {
-      "query": ">=1.2<2.0"
+      "query": ">=1.3<2.0"
     }
   }
 }

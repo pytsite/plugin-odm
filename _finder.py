@@ -6,6 +6,7 @@ __license__ = 'MIT'
 
 from typing import List as _List, Tuple as _Tuple, Union as _Union, Callable as _Callable, Optional as _Optional
 from abc import ABC as _ABC, abstractmethod as _abstractmethod
+from copy import deepcopy as _deepcopy
 from bson import DBRef as _DBRef
 from pymongo.cursor import Cursor as _Cursor, CursorType as _CursorType
 from pytsite import util as _util, reg as _reg, cache as _cache
@@ -151,6 +152,7 @@ class Finder(_ABC):
         self._sort = None
         self._result_processor = None
         self._cache_ttl = _CACHE_TTL
+        self._no_cache_fields = []
 
     @property
     def query(self) -> _query.Query():
@@ -160,7 +162,11 @@ class Finder(_ABC):
     def id(self) -> str:
         """Get unique finder's ID to use as a cache key, etc
         """
-        return _util.md5_hex_digest(str((str(self._query), self._skip, self._limit, self._sort)))
+        q = _deepcopy(self._query)
+        for f in self._no_cache_fields:
+            q.rm_field(f)
+
+        return _util.md5_hex_digest('{}{}{}{}'.format(q, self._skip, self._limit, self._sort))
 
     @property
     def result_processor(self) -> _Optional[_Callable[[_model.Entity], _model.Entity]]:
@@ -194,6 +200,16 @@ class Finder(_ABC):
 
         return self
 
+    def no_cache(self, field: str = None):
+        """Disable caching of the field or entire query
+        """
+        if field:
+            self._no_cache_fields.append(field)
+        else:
+            self.cache(0)
+
+        return self
+
     def add(self, op: _query.Operator):
         """Add a query operator
         """
@@ -201,21 +217,10 @@ class Finder(_ABC):
 
         return self
 
-    def rm(self, field: str, _root: _query.Operator = None):
+    def rm(self, field: str):
         """Remove all operator that use specified field
         """
-        if _root is None:
-            _root = self._query
-
-        ops_to_del = []
-        for i, op in enumerate(_root):
-            if isinstance(op, _query.LogicalOperator):
-                self.rm(field, op)
-            elif isinstance(op, _query.FieldOperator) and op.field == field:
-                ops_to_del.append(i)
-
-        for i in ops_to_del:
-            del _root[i]
+        self.query.rm_field(field)
 
         return self
 
@@ -418,13 +423,13 @@ class SingleModelFinder(Finder):
         """
         return self._mock
 
-    def rm(self, field: str, _root: _query.Operator = None):
+    def rm(self, field: str):
         """Remove all operator that use specified field
         """
         if not self._mock.has_field(field):
             raise _error.FieldNotDefined(self._model, field)
 
-        return super().rm(field, _root)
+        return super().rm(field)
 
     def distinct(self, field: str) -> list:
         """Get a list of distinct values for field among all documents in the collection
@@ -522,7 +527,7 @@ class MultiModelFinder(Finder):
 
         return self
 
-    def rm(self, field: str, _root: _query.Operator = None):
+    def rm(self, field: str):
         """Remove all operator that use specified field
         """
         for f in self._finders:
