@@ -151,7 +151,6 @@ class Finder(_ABC):
         self._sort = None
         self._result_processor = None
         self._cache_ttl = _CACHE_TTL
-        self._cache_key = []
 
     @property
     def query(self) -> _query.Query():
@@ -161,7 +160,7 @@ class Finder(_ABC):
     def id(self) -> str:
         """Get unique finder's ID to use as a cache key, etc
         """
-        return _util.md5_hex_digest(str((self._cache_key, self._skip, self._limit, self._sort)))
+        return _util.md5_hex_digest(str((str(self._query), self._skip, self._limit, self._sort)))
 
     @property
     def result_processor(self) -> _Optional[_Callable[[_model.Entity], _model.Entity]]:
@@ -195,17 +194,14 @@ class Finder(_ABC):
 
         return self
 
-    def add(self, op: _query.Operator, cache: bool = True):
+    def add(self, op: _query.Operator):
         """Add a query operator
         """
         self._query.add(op)
 
-        if cache:
-            self._cache_key.append(str(op))
-
         return self
 
-    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+    def rm(self, field: str, _root: _query.Operator = None):
         """Remove all operator that use specified field
         """
         if _root is None:
@@ -214,7 +210,7 @@ class Finder(_ABC):
         ops_to_del = []
         for i, op in enumerate(_root):
             if isinstance(op, _query.LogicalOperator):
-                self.rm(field, cache, op)
+                self.rm(field, op)
             elif isinstance(op, _query.FieldOperator) and op.field == field:
                 ops_to_del.append(i)
 
@@ -223,45 +219,45 @@ class Finder(_ABC):
 
         return self
 
-    def eq(self, field: str, arg, cache: bool = True):
+    def eq(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Eq(field, arg)), cache)
+        return self.add(_query.And(_query.Eq(field, arg)))
 
-    def gt(self, field: str, arg, cache: bool = True):
+    def gt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Gt(field, arg)), cache)
+        return self.add(_query.And(_query.Gt(field, arg)))
 
-    def gte(self, field: str, arg, cache: bool = True):
+    def gte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Gte(field, arg)), cache)
+        return self.add(_query.And(_query.Gte(field, arg)))
 
-    def lt(self, field: str, arg, cache: bool = True):
+    def lt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Lt(field, arg)), cache)
+        return self.add(_query.And(_query.Lt(field, arg)))
 
-    def lte(self, field: str, arg, cache: bool = True):
+    def lte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Lte(field, arg)), cache)
+        return self.add(_query.And(_query.Lte(field, arg)))
 
-    def ne(self, field: str, arg, cache: bool = True):
+    def ne(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Ne(field, arg)), cache)
+        return self.add(_query.And(_query.Ne(field, arg)))
 
-    def inc(self, field: str, arg, cache: bool = True):
+    def inc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.In(field, arg)), cache)
+        return self.add(_query.And(_query.In(field, arg)))
 
-    def ninc(self, field: str, arg, cache: bool = True):
+    def ninc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Nin(field, arg)), cache)
+        return self.add(_query.And(_query.Nin(field, arg)))
 
     def regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
               dot_all: bool = False, verbose: bool = False):
@@ -269,55 +265,55 @@ class Finder(_ABC):
         """
         return self.add(_query.And(_query.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
 
-    def or_eq(self, field: str, arg, cache: bool = True):
+    def or_eq(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Eq(field, arg)), cache)
+        return self.add(_query.Or(_query.Eq(field, arg)))
 
-    def or_gt(self, field: str, arg, cache: bool = True):
+    def or_gt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Gt(field, arg)), cache)
+        return self.add(_query.Or(_query.Gt(field, arg)))
 
-    def or_gte(self, field: str, arg, cache: bool = True):
+    def or_gte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Gte(field, arg)), cache)
+        return self.add(_query.Or(_query.Gte(field, arg)))
 
-    def or_lt(self, field: str, arg, cache: bool = True):
+    def or_lt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Lt(field, arg)), cache)
+        return self.add(_query.Or(_query.Lt(field, arg)))
 
-    def or_lte(self, field: str, arg, cache: bool = True):
+    def or_lte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Lte(field, arg)), cache)
+        return self.add(_query.Or(_query.Lte(field, arg)))
 
-    def or_ne(self, field: str, arg, cache: bool = True):
+    def or_ne(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Ne(field, arg)), cache)
+        return self.add(_query.Or(_query.Ne(field, arg)))
 
-    def or_inc(self, field: str, arg, cache: bool = True):
+    def or_inc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.In(field, arg)), cache)
+        return self.add(_query.Or(_query.In(field, arg)))
 
-    def or_ninc(self, field: str, arg, cache: bool = True):
+    def or_ninc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Nin(field, arg)), cache)
+        return self.add(_query.Or(_query.Nin(field, arg)))
 
-    def text(self, search: str, language: str = None, cache: bool = True):
+    def text(self, search: str, language: str = None):
         """Shortcut
         """
-        return self.add(_query.And(_query.Text(search, language)), cache)
+        return self.add(_query.And(_query.Text(search, language)))
 
-    def or_text(self, search: str, language: str = None, cache: bool = True):
+    def or_text(self, search: str, language: str = None):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Text(search, language)), cache)
+        return self.add(_query.Or(_query.Text(search, language)))
 
     def or_regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
                  dot_all: bool = False, verbose: bool = False):
@@ -422,13 +418,13 @@ class SingleModelFinder(Finder):
         """
         return self._mock
 
-    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+    def rm(self, field: str, _root: _query.Operator = None):
         """Remove all operator that use specified field
         """
         if not self._mock.has_field(field):
             raise _error.FieldNotDefined(self._model, field)
 
-        return super().rm(field, cache, _root)
+        return super().rm(field, _root)
 
     def distinct(self, field: str) -> list:
         """Get a list of distinct values for field among all documents in the collection
@@ -517,20 +513,20 @@ class MultiModelFinder(Finder):
 
         self._finders = [SingleModelFinder(model, query) for model in models]
 
-    def add(self, op: _query.Operator, cache: bool = True):
+    def add(self, op: _query.Operator):
         """Add a query criteria
         """
         # Add operator to every finder
         for f in self._finders:
-            f.add(op, cache)
+            f.add(op)
 
         return self
 
-    def rm(self, field: str, cache: bool = True, _root: _query.Operator = None):
+    def rm(self, field: str, _root: _query.Operator = None):
         """Remove all operator that use specified field
         """
         for f in self._finders:
-            f.rm(field, cache)
+            f.rm(field)
 
         return self
 

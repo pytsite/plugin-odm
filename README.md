@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.8.1 (2018-12-10)
+
+Unused obsolete `cache` arg removed from all `Finder`'s methods.
+
+
 ### 5.8 (2018-12-09)
 
 New `Finder.rm()` method added.
