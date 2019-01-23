@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.10 (2018-01-23)
+
+New `field.RefsList.model_cls` property added.
+
+
 ### 5.9 (2018-12-10)
 
 New method `Finder.no_cache()` added.

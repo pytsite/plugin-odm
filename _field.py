@@ -432,6 +432,12 @@ class Ref(Abstract):
         """
         return self._model
 
+    @property
+    def model_cls(self) -> _Optional[_Type]:
+        """Get model class
+        """
+        return self._model_cls
+
     def _on_set(self, raw_value, **kwargs) -> _Optional[str]:
         """Hook
         """
@@ -511,6 +517,7 @@ class RefsList(List):
         from ._model import Entity
 
         self._model = kwargs.get('model', '*')
+        self._model_cls = kwargs.get('model_cls')  # type: _Optional[_Type]
 
         super().__init__(name, allowed_types=(Entity,), **kwargs)
 
@@ -519,6 +526,12 @@ class RefsList(List):
         """Get model
         """
         return self._model
+
+    @property
+    def model_cls(self) -> _Optional[_Type]:
+        """Get model class
+        """
+        return self._model_cls
 
     def _on_set(self, raw_value, **kwargs) -> _List[str]:
         """Set value of the field
@@ -545,6 +558,10 @@ class RefsList(List):
             # Check entity's model
             if self._model not in ('*', entity.model):
                 raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
+
+            # Check entity's class
+            if self._model_cls and not isinstance(entity, self._model_cls):
+                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
 
             if not self._unique or (self._unique and entity.ref not in r):
                 r.append(entity.ref)
@@ -581,6 +598,8 @@ class RefsList(List):
         if isinstance(raw_value_to_add, Entity):
             if self._model not in ('*', raw_value_to_add.model):
                 raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_add.model))
+            if self._model_cls and not isinstance(raw_value_to_add, self._model_cls):
+                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_add)))
         else:
             raise TypeError("Entity expected, got '{}'".format(type(raw_value_to_add)))
 
@@ -594,6 +613,8 @@ class RefsList(List):
         if isinstance(raw_value_to_sub, Entity):
             if self._model not in ('*', raw_value_to_sub.model):
                 raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_sub.model))
+            if self._model_cls and not isinstance(raw_value_to_sub, self._model_cls):
+                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_sub)))
         else:
             raise TypeError("Entity expected")
 
