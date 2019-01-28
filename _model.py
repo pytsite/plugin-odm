@@ -55,7 +55,7 @@ class Entity(_ABC):
         self.define_field(_field.String('_ref', required=True))
         self.define_field(_field.String('_model', required=True, default=self._model))
         self.define_field(_field.Ref('_parent', model=model))
-        self.define_field(_field.Integer('_depth', required=True, default=0))
+        self.define_field(_field.Integer('_depth'))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
 

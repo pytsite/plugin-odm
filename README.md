@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.10.2 (2019-01-28)
+
+Fixed `Entity._depth` field definition.
+
+
 ### 5.10.1 (2019-01-28)
 
 Overriding of `field.Integer.is_empty` removed.
