@@ -4,7 +4,12 @@
 ## Changelog
 
 
-### 5.10 (2018-01-23)
+### 5.10.1 (2019-01-28)
+
+Overriding of `field.Integer.is_empty` removed.
+
+
+### 5.10 (2019-01-23)
 
 New `field.RefsList.model_cls` property added.
 

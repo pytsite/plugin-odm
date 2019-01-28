@@ -838,11 +838,6 @@ class Integer(Abstract):
         """
         return 1
 
-    @property
-    def is_empty(self) -> bool:
-        # This field always is not empty
-        return False
-
     def sanitize_finder_arg(self, arg) -> _Union[int, _List[int]]:
         """Hook used for sanitizing Finder's query argument
         """
