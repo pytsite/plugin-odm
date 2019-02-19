@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.10.3 (2019-02-19)
+
+`field.Abstract.default` setter fixed.
+
+
 ### 5.10.2 (2019-01-28)
 
 Fixed `Entity._depth` field definition.

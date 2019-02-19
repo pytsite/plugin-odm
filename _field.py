@@ -29,7 +29,10 @@ class Abstract:
         self._storable = kwargs.get('storable', True)
         self._required = kwargs.get('required', False)
         self._default = kwargs.get('default')
-        self._value = self._on_set(self._default, init=True) if self._default is not None else self._default
+        self._value = None
+
+        if self._default is not None:
+            self._on_set(_deepcopy(self._default), init=True)
 
     @property
     def storable(self) -> bool:
@@ -60,6 +63,7 @@ class Abstract:
     @default.setter
     def default(self, value):
         self._default = value
+        self.rst_val()
 
     def _on_get_storable(self, value, **kwargs):
         """Hook
