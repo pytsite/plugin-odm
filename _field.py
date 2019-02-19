@@ -32,7 +32,7 @@ class Abstract:
         self._value = None
 
         if self._default is not None:
-            self._on_set(_deepcopy(self._default), init=True)
+            self.rst_val(init=True)
 
     @property
     def storable(self) -> bool:
@@ -110,12 +110,12 @@ class Abstract:
     def _on_rst(self, raw_value, **kwargs):
         """Hook
         """
-        return self.set_val(_deepcopy(self._default))
+        return raw_value
 
-    def rst_val(self):
+    def rst_val(self, **kwargs):
         """Reset field's value to default
         """
-        return self.set_val(_deepcopy(self._default))
+        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val()

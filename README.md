@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.10.4 (2019-02-19)
+
+`field.Abstract.rst_val()` fixed.
+
+
 ### 5.10.3 (2019-02-19)
 
 `field.Abstract.default` setter fixed.
