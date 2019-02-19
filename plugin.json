@@ -1,6 +1,6 @@
 {
   "name": "odm",
-  "version": "5.10.4",
+  "version": "5.11",
   "description": {
     "en": "Object Document Mapper",
     "ru": "Object Document Mapper",
@@ -13,7 +13,7 @@
     "url": "https://shepetko.com"
   },
   "requires": {
-    "pytsite": ">=8.9",
+    "pytsite": ">=8.11",
     "plugins": {
       "query": "^1.3"
     }

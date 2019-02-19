@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.11 (2019-02-19)
+
+Support of `pytsite-8.11`.
+
+
 ### 5.10.4 (2019-02-19)
 
 `field.Abstract.rst_val()` fixed.

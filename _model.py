@@ -32,12 +32,7 @@ class Entity(_ABC):
 
         # Define collection name if it wasn't specified
         if self._collection_name is None:
-            if model[-1:] in ('s', 'h'):
-                self._collection_name = model + 'es'
-            elif model[-1:] in ('y',):
-                self._collection_name = model[:-1] + 'ies'
-            else:
-                self._collection_name = model + 's'
+            self._collection_name = _lang.english_plural(model)
 
         self._model = model
         self._is_new = True
