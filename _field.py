@@ -18,37 +18,35 @@ class Abstract:
     """Base ODM Field
     """
 
-    def __init__(self, name: str, **kwargs):
-        """Init
-
-        :param storable: bool
-        :param required: bool
-        :param default
-        """
-        self._name = name
-        self._storable = kwargs.get('storable', True)
-        self._required = kwargs.get('required', False)
-        self._default = kwargs.get('default')
-        self._value = None
-
-        if self._default is not None:
-            self.rst_val(init=True)
-
     @property
-    def storable(self) -> bool:
-        return self._storable
+    def is_storable(self) -> bool:
+        """Get if the field is storable
+        """
+        return self._is_storable
 
     @property
     def required(self) -> bool:
+        """Get if the field is required
+        """
         return self._required
 
     @required.setter
     def required(self, value: bool):
+        """Set if the field is required
+        """
         self._required = value
 
     @property
     def is_empty(self) -> bool:
+        """Check if the field is empty
+        """
         return not bool(self._value)
+
+    @property
+    def is_modified(self) -> bool:
+        """Check if the field is changed
+        """
+        return self._is_modified
 
     @property
     def name(self) -> str:
@@ -58,12 +56,34 @@ class Abstract:
 
     @property
     def default(self) -> _Any:
+        """Get default value of the field
+        """
         return self._default
 
     @default.setter
     def default(self, value):
+        """Set default value of the field
+        """
         self._default = value
         self.rst_val()
+
+    def __init__(self, name: str, **kwargs):
+        """Init
+
+        :param storable: bool
+        :param required: bool
+        :param default
+        """
+        self._name = name
+        self._default = kwargs.get('default')
+        self._required = kwargs.get('required', False)
+        self._is_storable = kwargs.get('is_storable', True)
+        self._is_modified = False
+
+        self._value = None
+
+        if self._default is not None:
+            self.rst_val(init=True)
 
     def _on_get_storable(self, value, **kwargs):
         """Hook
@@ -103,7 +123,11 @@ class Abstract:
     def set_val(self, value, **kwargs):
         """Set value of the field
         """
+        prev_value = self._value
         self._value = self._on_set(value, **kwargs)
+
+        if prev_value != self._value:
+            self._is_modified = True
 
         return self
 
@@ -187,7 +211,7 @@ class Virtual(Abstract):
     """
 
     def __init__(self, name: str, **kwargs):
-        super().__init__(name, storable=False, **kwargs)
+        super().__init__(name, is_storable=False, **kwargs)
 
 
 class ObjectId(Abstract):

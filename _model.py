@@ -20,18 +20,14 @@ _CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
 
 
 class Entity(_ABC):
-    """ODM Model.
+    """ODM Entity Model
     """
 
     def __init__(self, model: str, obj_id: _Union[str, _ObjectId, None] = None):
         """Init.
         """
-        # Let developer to specify collection name manually
-        if not hasattr(self, '_collection_name'):
-            self._collection_name = None
-
         # Define collection name if it wasn't specified
-        if self._collection_name is None:
+        if not hasattr(self, '_collection_name'):
             self._collection_name = _lang.english_plural(model)
 
         self._model = model
@@ -99,7 +95,7 @@ class Entity(_ABC):
                 field = self.get_field(f_name)
 
                 # Fields that must not be overwritten
-                if f_name == '_model' or not field.storable:
+                if f_name == '_model' or not field.is_storable:
                     continue
 
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
@@ -524,9 +520,14 @@ class Entity(_ABC):
         pass
 
     def f_is_empty(self, field_name: str) -> bool:
-        """Checks if the field is empty.
+        """Checks if the field is empty
         """
         return self.get_field(field_name).is_empty
+
+    def f_is_modified(self, field_name: str) -> bool:
+        """Checks if the field is modified
+        """
+        return self.get_field(field_name).is_modified
 
     def append_child(self, child):
         """Append child to the entity
@@ -544,7 +545,7 @@ class Entity(_ABC):
         return self
 
     def remove_child(self, child):
-        """Remove child from the entity.
+        """Remove child from the entity
 
         :type child: Entity
         """
@@ -656,12 +657,12 @@ class Entity(_ABC):
         return self
 
     def _pre_save(self, **kwargs):
-        """Pre save hook.
+        """Pre save hook
         """
         pass
 
     def _after_save(self, first_save: bool = False, **kwargs):
-        """After save hook.
+        """After save hook
         """
         pass
 
@@ -729,12 +730,12 @@ class Entity(_ABC):
         return self
 
     def _pre_delete(self, **kwargs):
-        """Pre delete hook.
+        """Pre delete hook
         """
         pass
 
     def _after_delete(self, **kwargs):
-        """After delete hook.
+        """After delete hook
         """
         pass
 
@@ -745,7 +746,7 @@ class Entity(_ABC):
 
         for f_name, f in self.fields.items():
             # Check if the field is storable
-            if not f.storable:
+            if not f.is_storable:
                 continue
 
             # Required fields should be filled
@@ -792,7 +793,7 @@ class Entity(_ABC):
 
     @classmethod
     def t_plural(cls, partial_msg_id: str, num: int = 2) -> str:
-        """Translate a string into plural form.
+        """Translate a string into plural form
         """
         return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
 

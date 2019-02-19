@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 5.12 (2019-02-19)
+
+- New property `field.Abstract.is_modified` added.
+- New method `model.Entity.f_is_modified()` added.
+
+
 ### 5.11 (2019-02-19)
 
 Support of `pytsite-8.11`.
