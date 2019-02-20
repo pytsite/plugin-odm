@@ -48,6 +48,12 @@ class Abstract:
         """
         return self._is_modified
 
+    @is_modified.setter
+    def is_modified(self, value: bool):
+        """Set field's 'modified' status
+        """
+        self._is_modified = value
+
     @property
     def name(self) -> str:
         """Get name of the field

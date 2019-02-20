@@ -645,6 +645,8 @@ class Entity(_ABC):
 
         # Saved entity is not 'modified'
         self._is_modified = False
+        for f in self._fields.values():
+            f.is_modified = False
 
         # Save children with updated '_parent' field
         for child in self._pending_children:

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.12.1 (2019-02-20)
+
+Missing reset of fields `is_modified` status fixed.
+
+
 ### 5.12 (2019-02-19)
 
 - New property `field.Abstract.is_modified` added.
