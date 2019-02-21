@@ -23,8 +23,230 @@ class Entity(_ABC):
     """ODM Entity Model
     """
 
+    @property
+    def indexes(self) -> list:
+        """Get index information
+        """
+        return self._indexes
+
+    @property
+    def has_text_index(self) -> bool:
+        """If model has text index
+        """
+        return self._has_text_index
+
+    @property
+    def collection(self) -> _Collection:
+        """Get entity's collection.
+        """
+        return _db.get_collection(self._collection_name)
+
+    @property
+    def fields(self) -> _Dict[str, _field.Abstract]:
+        """Get fields objects
+        """
+        return self._fields
+
+    @property
+    def id(self) -> _Union[_ObjectId, None]:
+        """Get entity ID
+        """
+        return self.f_get('_id')
+
+    @property
+    def ref(self) -> str:
+        """Get entity reference
+        """
+        if not self.id:
+            raise _error.EntityNotStored(self._model)
+
+        return self.f_get('_ref')
+
+    @property
+    def model(self) -> str:
+        """Get model name
+        """
+        return self._model
+
+    @property
+    def parent(self):
+        """Get parent entity
+        :rtype: Entity
+        """
+        return self.f_get('_parent')
+
+    @parent.setter
+    def parent(self, value):
+        """Set parent entity
+        """
+        self.f_set('_parent', value)
+
+    @property
+    def children(self):
+        """Get children entities
+
+        :rtype: typing.Iterable[Entity]
+        """
+        if self.is_new:
+            return []
+
+        from . import _api
+
+        return _api.find(self._model).eq('_parent', self).get()
+
+    @property
+    def children_count(self) -> int:
+        """Get number of children
+        """
+        if self.is_new:
+            return 0
+
+        from . import _api
+
+        return _api.find(self._model).eq('_parent', self).count()
+
+    @property
+    def has_children(self) -> bool:
+        """Check if the entity has at least one child
+        """
+        return bool(self.children_count)
+
+    @property
+    def descendants(self):
+        """Get descendant entities
+
+        :rtype: typing.Iterable[Entity]
+        """
+        for child in self.children:
+            yield child
+            for d in child.descendants:
+                yield d
+
+    @property
+    def depth(self) -> int:
+        """Get depth of the entity in the tree
+        """
+        return self.f_get('_depth')
+
+    @depth.setter
+    def depth(self, value: int):
+        """Set depth of the entity in the tree
+        """
+        self.f_set('_depth', value)
+
+    @property
+    def created(self) -> _datetime:
+        """Get date/time when the entity was created
+        """
+        return self.f_get('_created')
+
+    @created.setter
+    def created(self, value: int):
+        """Set date/time when the entity was created
+        """
+        self.f_set('_created', value)
+
+    @property
+    def modified(self) -> _datetime:
+        """Get date/time when the entity was modified
+        """
+        return self.f_get('_modified')
+
+    @modified.setter
+    def modified(self, value: int):
+        """Set date/time when the entity was modified
+        """
+        self.f_set('_modified', value)
+
+    @property
+    def is_new(self) -> bool:
+        """Is the entity stored in the database?
+        """
+        return self._is_new
+
+    @property
+    def is_modified(self) -> bool:
+        """Is the entity has been modified?
+        """
+        return self._is_modified
+
+    @property
+    def is_saved(self) -> bool:
+        """Is entity saved?
+        """
+        return self._is_saved
+
+    @property
+    def is_being_saved(self) -> bool:
+        """Is entity being saved?
+        """
+        return self._is_being_saved
+
+    @property
+    def is_deleted(self) -> bool:
+        """Is the entity has been deleted?
+        """
+        return self._is_deleted
+
+    @property
+    def is_being_deleted(self) -> bool:
+        """Is entity being deleted?
+        """
+        return self._is_being_deleted
+
+    @classmethod
+    def on_register(cls, model: str):
+        """Called when model is being registered by odm.register_model()
+        """
+        pass
+
+    @classmethod
+    def package_name(cls) -> str:
+        """Get package name of the object class
+        """
+        return '.'.join(cls.__module__.split('.')[:-1])
+
+    @classmethod
+    def lang_package_name(cls) -> str:
+        """Get lang's package name to use in t() and t_plural() methods
+        """
+        return cls.package_name()
+
+    @classmethod
+    def resolve_lang_msg_id(cls, partial_msg_id: str) -> str:
+        # Searching for translation up in hierarchy
+        for super_cls in cls.__mro__:
+            if hasattr(super_cls, 'package_name') and callable(super_cls.package_name):
+                full_msg_id = super_cls.package_name() + '@' + partial_msg_id
+                if _lang.is_translation_defined(full_msg_id):
+                    return full_msg_id
+
+        return cls.lang_package_name() + '@' + partial_msg_id
+
+    @classmethod
+    def t(cls, partial_msg_id: str, args: dict = None) -> str:
+        """Translate a string in model context
+        """
+        return _lang.t(cls.resolve_lang_msg_id(partial_msg_id), args)
+
+    @classmethod
+    def t_plural(cls, partial_msg_id: str, num: int = 2) -> str:
+        """Translate a string into plural form
+        """
+        return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
+
+    def __str__(self):
+        """__str__ overloading
+        """
+        return self.ref
+
+    def __eq__(self, other) -> bool:
+        """__eq__ overloading
+        """
+        return hasattr(other, 'ref') and self.ref == other.ref
+
     def __init__(self, model: str, obj_id: _Union[str, _ObjectId, None] = None):
-        """Init.
+        """Init
         """
         # Define collection name if it wasn't specified
         if not hasattr(self, '_collection_name'):
@@ -33,6 +255,8 @@ class Entity(_ABC):
         self._model = model
         self._is_new = True
         self._is_modified = True
+        self._is_being_saved = False
+        self._is_saved = False
         self._is_being_deleted = False
         self._is_deleted = False
         self._indexes = []
@@ -64,12 +288,6 @@ class Entity(_ABC):
         # Load fields data from database or cache
         if obj_id:
             self._load_fields_data(_ObjectId(obj_id) if isinstance(obj_id, str) else obj_id)
-
-    @classmethod
-    def on_register(cls, model: str):
-        """Called when model is being registered by odm.register_model()
-        """
-        pass
 
     def _load_fields_data(self, eid: _ObjectId):
         """Load fields data from the database
@@ -108,9 +326,10 @@ class Entity(_ABC):
         if not self.f_get('_ref'):
             self.f_set('_ref', '{}:{}'.format(self.model, self.id))
 
-        # Of course, loaded entity cannot be 'new' and 'modified'
+        # Of course, loaded entity cannot be 'new' and 'modified', but only 'saved'
         self._is_new = False
         self._is_modified = False
+        self._is_saved = True
 
     def define_index(self, definition: _List[_Tuple], unique: bool = False, name: str = None):
         """Define an index.
@@ -171,16 +390,6 @@ class Entity(_ABC):
         for index_data in self.indexes:
             self.collection.create_index(index_data[0], **index_data[1])
 
-    @property
-    def indexes(self) -> list:
-        """Get index information.
-        """
-        return self._indexes
-
-    @property
-    def has_text_index(self) -> bool:
-        return self._has_text_index
-
     def reindex(self):
         """Rebuild indices.
         """
@@ -225,151 +434,6 @@ class Entity(_ABC):
 
         return self._fields[field_name]
 
-    @property
-    def collection(self) -> _Collection:
-        """Get entity's collection.
-        """
-        return _db.get_collection(self._collection_name)
-
-    @property
-    def fields(self) -> _Dict[str, _field.Abstract]:
-        """Get all field objects.
-        """
-        return self._fields
-
-    @property
-    def id(self) -> _Union[_ObjectId, None]:
-        """Get entity ID.
-        """
-        return self.f_get('_id')
-
-    @property
-    def ref(self) -> str:
-        if not self.id:
-            raise _error.EntityNotStored(self._model)
-
-        return self.f_get('_ref')
-
-    @property
-    def model(self) -> str:
-        """Get model name.
-        """
-        return self._model
-
-    @property
-    def parent(self):
-        """Get parent entity
-        :rtype: Entity
-        """
-        return self.f_get('_parent')
-
-    @parent.setter
-    def parent(self, value):
-        """Get parent entity
-        """
-        self.f_set('_parent', value)
-
-    @property
-    def children(self):
-        """Get children entities
-
-        :rtype: typing.Iterable[Entity]
-        """
-        if self.is_new:
-            return []
-
-        from . import _api
-
-        return _api.find(self._model).eq('_parent', self).get()
-
-    @property
-    def children_count(self) -> int:
-        """Get number of children
-        """
-        if self.is_new:
-            return 0
-
-        from . import _api
-
-        return _api.find(self._model).eq('_parent', self).count()
-
-    @property
-    def has_children(self) -> bool:
-        """Check if the entity has at least one child
-        """
-        return bool(self.children_count)
-
-    @property
-    def descendants(self):
-        """Get descendant entities
-
-        :rtype: typing.Iterable[Entity]
-        """
-        for child in self.children:
-            yield child
-            for d in child.descendants:
-                yield d
-
-    @property
-    def depth(self) -> int:
-        """Get depth of the entity in the tree
-        """
-        return self.f_get('_depth')
-
-    @depth.setter
-    def depth(self, value: int):
-        """Get depth of the entity in the tree
-        """
-        self.f_set('_depth', value)
-
-    @property
-    def created(self) -> _datetime:
-        """Get date/time when the entity was created
-        """
-        return self.f_get('_created')
-
-    @created.setter
-    def created(self, value: int):
-        """Set date/time when the entity was created
-        """
-        self.f_set('_created', value)
-
-    @property
-    def modified(self) -> _datetime:
-        """Get date/time when the entity was modified
-        """
-        return self.f_get('_modified')
-
-    @modified.setter
-    def modified(self, value: int):
-        """Set date/time when the entity was modified
-        """
-        self.f_set('_modified', value)
-
-    @property
-    def is_new(self) -> bool:
-        """Is the entity stored in the database?
-        """
-        return self._is_new
-
-    @property
-    def is_modified(self) -> bool:
-        """Is the entity has been modified?
-        """
-        return self._is_modified
-
-    @property
-    def is_deleted(self) -> bool:
-        """Is the entity has been deleted?
-        """
-        return self._is_deleted
-
-    @property
-    def is_being_deleted(self) -> bool:
-        """Is entity is being deleted?
-        """
-        return self._is_being_deleted
-
     def f_set(self, field_name: str, value, update_state: bool = True, **kwargs):
         """Set field's value.
         """
@@ -402,6 +466,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -444,6 +509,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -463,6 +529,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -479,6 +546,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -495,6 +563,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -511,6 +580,7 @@ class Entity(_ABC):
 
         if update_state:
             self._is_modified = True
+            self._is_saved = False
 
         return self
 
@@ -601,6 +671,9 @@ class Entity(_ABC):
         if not (self._is_modified or kwargs.get('force')):
             return self
 
+        # Flag saving process as started
+        self._is_being_saved = True
+
         # Shortcut
         if kwargs.get('fast'):
             kwargs['update_timestamp'] = False
@@ -643,7 +716,9 @@ class Entity(_ABC):
             _events.fire('odm@entity.save', entity=self, first_save=first_save)
             _events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
 
-        # Saved entity is not 'modified'
+        # Mark entity as saved and is not modified
+        self._is_being_saved = False
+        self._is_saved = True
         self._is_modified = False
         for f in self._fields.values():
             f.is_modified = False
@@ -763,49 +838,3 @@ class Entity(_ABC):
         """Get JSONable dictionary representation of the entity
         """
         return {'ref': self.ref}
-
-    @classmethod
-    def package_name(cls) -> str:
-        """Get package name of the object class
-        """
-        return '.'.join(cls.__module__.split('.')[:-1])
-
-    @classmethod
-    def lang_package_name(cls) -> str:
-        """Get lang's package name to use in t() and t_plural() methods
-        """
-        return cls.package_name()
-
-    @classmethod
-    def resolve_lang_msg_id(cls, partial_msg_id: str) -> str:
-        # Searching for translation up in hierarchy
-        for super_cls in cls.__mro__:
-            if hasattr(super_cls, 'package_name') and callable(super_cls.package_name):
-                full_msg_id = super_cls.package_name() + '@' + partial_msg_id
-                if _lang.is_translation_defined(full_msg_id):
-                    return full_msg_id
-
-        return cls.lang_package_name() + '@' + partial_msg_id
-
-    @classmethod
-    def t(cls, partial_msg_id: str, args: dict = None) -> str:
-        """Translate a string in model context
-        """
-        return _lang.t(cls.resolve_lang_msg_id(partial_msg_id), args)
-
-    @classmethod
-    def t_plural(cls, partial_msg_id: str, num: int = 2) -> str:
-        """Translate a string into plural form
-        """
-        return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
-
-    def __str__(self):
-        """__str__ overloading
-        """
-        return self.ref
-
-    def __eq__(self, other) -> bool:
-        """__eq__ overloading
-        """
-
-        return hasattr(other, 'ref') and self.ref == other.ref

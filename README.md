@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.13 (2019-02-21)
+
+New properties in `model.Entity`: `is_saved`
+
+
 ### 5.12.1 (2019-02-20)
 
 Missing reset of fields `is_modified` status fixed.
