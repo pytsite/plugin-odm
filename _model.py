@@ -317,12 +317,12 @@ class Entity(_ABC):
                     continue
 
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
-                field.set_val(f_value, from_db=True)
+                field.set_val(f_value, update_state=False)
             except _error.FieldNotDefined:
-                # Fields definition may be removed from version to version, so just ignore this situation
+                # Fields definition may be removed from version to version, so just ignore non-existent fields
                 pass
 
-        # On versions prior to 1.4 field '_ref' didn't exist, so we need to check it
+        # In versions prior to 1.4 field '_ref' didn't exist, so we need to check it
         if not self.f_get('_ref'):
             self.f_set('_ref', '{}:{}'.format(self.model, self.id))
 
@@ -434,12 +434,13 @@ class Entity(_ABC):
 
         return self._fields[field_name]
 
-    def f_set(self, field_name: str, value, update_state: bool = True, **kwargs):
+    def f_set(self, field_name: str, value, **kwargs):
         """Set field's value.
         """
         field = self.get_field(field_name)
-
         field.set_val(self._on_f_set(field_name, value, **kwargs), **kwargs)
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         # Check relations
         if field_name == '_parent':
@@ -463,10 +464,6 @@ class Entity(_ABC):
             for child in self.children:
                 child.depth = field.get_val() + 1
                 self._pending_children.append(child)
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
 
         return self
 
@@ -501,15 +498,14 @@ class Entity(_ABC):
         """
         return value
 
-    def f_add(self, field_name: str, value, update_state: bool = True, **kwargs):
+    def f_add(self, field_name: str, value, **kwargs):
         """Add a value to the field.
         """
         value = self._on_f_add(field_name, value, **kwargs)
-        self.get_field(field_name).add_val(value, **kwargs)
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
+        field = self.get_field(field_name)
+        field.add_val(value, **kwargs)
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         return self
 
@@ -518,18 +514,17 @@ class Entity(_ABC):
         """
         return value
 
-    def f_sub(self, field_name: str, value, update_state: bool = True, **kwargs):
+    def f_sub(self, field_name: str, value, **kwargs):
         """Subtract value from the field.
         """
         # Call hook
         value = self._on_f_sub(field_name, value, **kwargs)
 
         # Subtract value from the field
-        self.get_field(field_name).sub_val(value, **kwargs)
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
+        field = self.get_field(field_name)
+        field.sub_val(value, **kwargs)
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         return self
 
@@ -538,15 +533,14 @@ class Entity(_ABC):
         """
         return value
 
-    def f_inc(self, field_name: str, update_state: bool = True, **kwargs):
+    def f_inc(self, field_name: str, **kwargs):
         """Increment value of the field.
         """
         self._on_f_inc(field_name, **kwargs)
-        self.get_field(field_name).inc_val(**kwargs)
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
+        field = self.get_field(field_name)
+        field.inc_val(**kwargs)
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         return self
 
@@ -555,15 +549,14 @@ class Entity(_ABC):
         """
         pass
 
-    def f_dec(self, field_name: str, update_state: bool = True, **kwargs):
+    def f_dec(self, field_name: str, **kwargs):
         """Decrement value of the field
         """
         self._on_f_dec(field_name, **kwargs)
-        self.get_field(field_name).dec_val(**kwargs)
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
+        field = self.get_field(field_name)
+        field.dec_val(**kwargs)
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         return self
 
@@ -572,15 +565,14 @@ class Entity(_ABC):
         """
         pass
 
-    def f_rst(self, field_name: str, update_state: bool = True, **kwargs):
-        """Clear field.
+    def f_rst(self, field_name: str, **kwargs):
+        """Clear field
         """
         self._on_f_rst(field_name, **kwargs)
-        self.get_field(field_name).rst_val()
-
-        if update_state:
-            self._is_modified = True
-            self._is_saved = False
+        field = self.get_field(field_name)
+        field.rst_val()
+        self._is_modified = field.is_modified
+        self._is_saved = not self._is_modified
 
         return self
 

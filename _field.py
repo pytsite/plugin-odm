@@ -89,7 +89,7 @@ class Abstract:
         self._value = None
 
         if self._default is not None:
-            self.rst_val(init=True)
+            self.rst_val(init=True, update_state=False)
 
     def _on_get_storable(self, value, **kwargs):
         """Hook
@@ -132,7 +132,7 @@ class Abstract:
         prev_value = self._value
         self._value = self._on_set(value, **kwargs)
 
-        if prev_value != self._value:
+        if kwargs.get('update_state', True) and prev_value != self._value:
             self._is_modified = True
 
         return self

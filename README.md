@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.15.1 (2019-02-28)
+
+Tracking of changes of entities' fields fixed.
+
+
 ### 5.15 (2019-02-27)
 
 New hook `model.Entity._deleted()`.
