@@ -713,6 +713,7 @@ class Entity(_ABC):
         # After-save hook
         if kwargs.get('after_hooks', True):
             self._after_save(first_save, **kwargs)
+            self._created(**kwargs) if first_save else self._modified(**kwargs)
             _events.fire('odm@entity.save', entity=self, first_save=first_save)
             _events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
 
@@ -740,6 +741,16 @@ class Entity(_ABC):
 
     def _after_save(self, first_save: bool = False, **kwargs):
         """After save hook
+        """
+        pass
+
+    def _created(self, **kwargs):
+        """New entity created hook
+        """
+        pass
+
+    def _modified(self, **kwargs):
+        """Existing entity modified hook
         """
         pass
 

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.14 (2019-02-27)
+
+New `model.Entity`'s hooks: `_created()` and `_modified()`.
+
+
 ### 5.13 (2019-02-21)
 
 New properties in `model.Entity`: `is_saved`
