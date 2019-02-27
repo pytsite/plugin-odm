@@ -809,6 +809,7 @@ class Entity(_ABC):
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
         self._after_delete(**kwargs)
+        self._deleted(**kwargs)
         _events.fire('odm@entity.delete', entity=self)
         _events.fire('odm@entity.delete.{}'.format(self._model), entity=self)
 
@@ -823,6 +824,11 @@ class Entity(_ABC):
         pass
 
     def _after_delete(self, **kwargs):
+        """After delete hook
+        """
+        pass
+
+    def _deleted(self, **kwargs):
         """After delete hook
         """
         pass

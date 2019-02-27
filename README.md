@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.15 (2019-02-27)
+
+New hook `model.Entity._deleted()`.
+
+
 ### 5.14 (2019-02-27)
 
 New `model.Entity`'s hooks: `_created()` and `_modified()`.
