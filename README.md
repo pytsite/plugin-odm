@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.15.3 (2019-02-28)
+
+References checking fixed in `model.Entity.delete()`.
+
+
 ### 5.15.2 (2019-02-28)
 
 Tracking of changes of entities' fields fixed #2.

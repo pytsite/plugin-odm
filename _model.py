@@ -752,12 +752,20 @@ class Entity(_ABC):
             for model in _api.get_registered_models():
                 for field in _api.dispense(model).fields.values():
                     f = _api.find(model)
-                    if isinstance(field, _field.Ref) and field.model == self.model:
-                        f.eq(field.name, self)
-                    elif isinstance(field, _field.RefsList) and field.model == self.model:
-                        f.inc(field.name, self)
-                    else:
+
+                    if not isinstance(field, (_field.Ref, _field.RefsList)):
                         continue
+
+                    if field.model != '*' and self.model != field.model:
+                        continue
+
+                    if field.model_cls and not issubclass(self.__class__, field.model_cls):
+                        continue
+
+                    if isinstance(field, _field.Ref):
+                        f.eq(field.name, self)
+                    elif isinstance(field, _field.RefsList):
+                        f.inc(field.name, self)
 
                     e = f.first()
                     if e:
