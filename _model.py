@@ -174,7 +174,7 @@ class Entity(_ABC):
     def is_saved(self) -> bool:
         """Is entity saved?
         """
-        return self._is_saved
+        return not (self._is_new or self._is_modified)
 
     @property
     def is_being_saved(self) -> bool:
@@ -256,7 +256,6 @@ class Entity(_ABC):
         self._is_new = True
         self._is_modified = True
         self._is_being_saved = False
-        self._is_saved = False
         self._is_being_deleted = False
         self._is_deleted = False
         self._indexes = []
@@ -329,7 +328,6 @@ class Entity(_ABC):
         # Of course, loaded entity cannot be 'new' and 'modified', but only 'saved'
         self._is_new = False
         self._is_modified = False
-        self._is_saved = True
 
     def define_index(self, definition: _List[_Tuple], unique: bool = False, name: str = None):
         """Define an index.
@@ -439,8 +437,7 @@ class Entity(_ABC):
         """
         field = self.get_field(field_name)
         field.set_val(self._on_f_set(field_name, value, **kwargs), **kwargs)
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         # Check relations
         if field_name == '_parent':
@@ -504,8 +501,7 @@ class Entity(_ABC):
         value = self._on_f_add(field_name, value, **kwargs)
         field = self.get_field(field_name)
         field.add_val(value, **kwargs)
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         return self
 
@@ -523,8 +519,7 @@ class Entity(_ABC):
         # Subtract value from the field
         field = self.get_field(field_name)
         field.sub_val(value, **kwargs)
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         return self
 
@@ -539,8 +534,7 @@ class Entity(_ABC):
         self._on_f_inc(field_name, **kwargs)
         field = self.get_field(field_name)
         field.inc_val(**kwargs)
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         return self
 
@@ -555,8 +549,7 @@ class Entity(_ABC):
         self._on_f_dec(field_name, **kwargs)
         field = self.get_field(field_name)
         field.dec_val(**kwargs)
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         return self
 
@@ -571,8 +564,7 @@ class Entity(_ABC):
         self._on_f_rst(field_name, **kwargs)
         field = self.get_field(field_name)
         field.rst_val()
-        self._is_modified = field.is_modified
-        self._is_saved = not self._is_modified
+        self._is_modified = self._is_modified or field.is_modified
 
         return self
 
@@ -711,7 +703,6 @@ class Entity(_ABC):
 
         # Mark entity as saved and is not modified
         self._is_being_saved = False
-        self._is_saved = True
         self._is_modified = False
         for f in self._fields.values():
             f.is_modified = False
