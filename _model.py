@@ -747,6 +747,11 @@ class Entity(_ABC):
 
         self._check_is_not_deleted()
 
+        # Pre delete events and hook
+        _events.fire('odm@entity.pre_delete', entity=self)
+        _events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
+        self._pre_delete(**kwargs)
+
         # Search for entities that refers to this entity
         if not kwargs.get('force'):
             for model in _api.get_registered_models():
@@ -773,11 +778,6 @@ class Entity(_ABC):
 
         # Flag that deletion is in progress
         self._is_being_deleted = True
-
-        # Pre delete events and hook
-        _events.fire('odm@entity.pre_delete', entity=self)
-        _events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
-        self._pre_delete(**kwargs)
 
         # Notify each field about entity deletion
         for f_name, field in self._fields.items():

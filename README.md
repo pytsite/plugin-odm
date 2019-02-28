@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.15.4 (2019-02-28)
+
+Deletion hooks call order fixed.
+
+
 ### 5.15.3 (2019-02-28)
 
 References checking fixed in `model.Entity.delete()`.
