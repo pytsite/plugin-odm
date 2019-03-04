@@ -4,6 +4,21 @@
 ## Changelog
 
 
+### 6.0 (2019-03-04)
+
+- `field.Abstract` class renamed to `Base`.
+- `field.Base.required` prop renamed to `is_required`.
+- `field.List.unique` prop renamed to `is_unique`.
+- New method `field.Base.get_prev_val()` added.
+- New args `skip_hooks` and `reflect_prev_val` added to 
+  `field.Base.set_val()`.
+- All `model.Entity` hook methods got prefix `on`. 
+- `model.Entity._deleted()` hook method removed in favour of usage
+  `_on_after_delete()` method.
+- Default indexes added for `_created` and `_modified` fields of 
+  `model.Entity`.
+  
+
 ### 5.15.4 (2019-02-28)
 
 Deletion hooks call order fixed.

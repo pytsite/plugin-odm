@@ -18,9 +18,19 @@ from . import _error, _field, _queue
 _CACHE_POOL = _cache.get_pool('odm.entities')
 _CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
 
+_DEPRECATED_METHODS = {
+    '_pre_save': '_on_pre_save',
+    '_after_save': '_on_after_save',
+    '_pre_delete': '_on_after_delete',
+    '_after_delete': '_on_after_delete',
+    '_created': '_on_created',
+    '_modified': '_on_modified',
+    '_deleted': '_on_after_delete',
+}
+
 
 class Entity(_ABC):
-    """ODM Entity Model
+    """ODM Entity
     """
 
     @property
@@ -37,13 +47,13 @@ class Entity(_ABC):
 
     @property
     def collection(self) -> _Collection:
-        """Get entity's collection.
+        """Get entity's DB collection
         """
         return _db.get_collection(self._collection_name)
 
     @property
-    def fields(self) -> _Dict[str, _field.Abstract]:
-        """Get fields objects
+    def fields(self) -> _Dict[str, _field.Base]:
+        """Get entity's fields
         """
         return self._fields
 
@@ -71,6 +81,7 @@ class Entity(_ABC):
     @property
     def parent(self):
         """Get parent entity
+
         :rtype: Entity
         """
         return self.f_get('_parent')
@@ -78,6 +89,8 @@ class Entity(_ABC):
     @parent.setter
     def parent(self, value):
         """Set parent entity
+
+        :type value: Entity
         """
         self.f_set('_parent', value)
 
@@ -91,7 +104,6 @@ class Entity(_ABC):
             return []
 
         from . import _api
-
         return _api.find(self._model).eq('_parent', self).get()
 
     @property
@@ -102,7 +114,6 @@ class Entity(_ABC):
             return 0
 
         from . import _api
-
         return _api.find(self._model).eq('_parent', self).count()
 
     @property
@@ -195,10 +206,16 @@ class Entity(_ABC):
         return self._is_being_deleted
 
     @classmethod
+    def _check_deprecated_methods(cls):
+        for method, replacement in _DEPRECATED_METHODS.items():
+            if hasattr(cls, method):
+                raise DeprecationWarning('{}() is deprecated. Use {}() method instead.'.format(method, replacement))
+
+    @classmethod
     def on_register(cls, model: str):
-        """Called when model is being registered by odm.register_model()
+        """Hook called when model is being registered by odm.register_model()
         """
-        pass
+        cls._check_deprecated_methods()
 
     @classmethod
     def package_name(cls) -> str:
@@ -208,13 +225,14 @@ class Entity(_ABC):
 
     @classmethod
     def lang_package_name(cls) -> str:
-        """Get lang's package name to use in t() and t_plural() methods
+        """Get lang's package name to use by the t() and t_plural() methods
         """
         return cls.package_name()
 
     @classmethod
     def resolve_lang_msg_id(cls, partial_msg_id: str) -> str:
-        # Searching for translation up in hierarchy
+        """Get full message ID to use in lang methods
+        """
         for super_cls in cls.__mro__:
             if hasattr(super_cls, 'package_name') and callable(super_cls.package_name):
                 full_msg_id = super_cls.package_name() + '@' + partial_msg_id
@@ -262,24 +280,27 @@ class Entity(_ABC):
         self._has_text_index = False
         self._pending_children = []
 
-        self._fields = _OrderedDict()  # type: _Dict[str, _field.Abstract]
+        self._fields = _OrderedDict()  # type: _Dict[str, _field.Base]
 
         # Define 'system' fields
-        self.define_field(_field.ObjectId('_id', required=True))
-        self.define_field(_field.String('_ref', required=True))
-        self.define_field(_field.String('_model', required=True, default=self._model))
+        self.define_field(_field.ObjectId('_id', is_required=True))
+        self.define_field(_field.String('_ref', is_required=True))
+        self.define_field(_field.String('_model', is_required=True, default=self._model))
         self.define_field(_field.Ref('_parent', model=model))
         self.define_field(_field.Integer('_depth'))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
 
-        # Delegate fields setup process to the hook method
+        # Setup fields
         self._setup_fields()
         _events.fire('odm@model.setup_fields', entity=self)
         _events.fire('odm@model.setup_fields.{}'.format(model), entity=self)
 
         # Delegate indexes setup process to the hook method
+        self.define_index([('_ref', I_ASC)])
         self.define_index([('_parent', I_ASC)])
+        self.define_index([('_created', I_ASC)])
+        self.define_index([('_modified', I_ASC)])
         self._setup_indexes()
         _events.fire('odm@model.setup_indexes', entity=self)
         _events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
@@ -316,7 +337,7 @@ class Entity(_ABC):
                     continue
 
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
-                field.set_val(f_value, update_state=False)
+                field.set_val(f_value, skip_hooks=True, update_state=False, reflect_prev_val=True)
             except _error.FieldNotDefined:
                 # Fields definition may be removed from version to version, so just ignore non-existent fields
                 pass
@@ -330,7 +351,7 @@ class Entity(_ABC):
         self._is_modified = False
 
     def define_index(self, definition: _List[_Tuple], unique: bool = False, name: str = None):
-        """Define an index.
+        """Define an index(es)
         """
         opts = {
             'unique': unique,
@@ -363,8 +384,8 @@ class Entity(_ABC):
 
         self._indexes.append((definition, opts))
 
-    def define_field(self, field_obj: _field.Abstract):
-        """Define a field.
+    def define_field(self, field_obj: _field.Base):
+        """Define a field
         """
         if self.has_field(field_obj.name):
             raise RuntimeError("Field '{}' already defined in model '{}'.".format(field_obj.name, self._model))
@@ -375,7 +396,7 @@ class Entity(_ABC):
         return self
 
     def remove_field(self, field_name: str):
-        """Remove field definition.
+        """Remove field definition
         """
         if not self.has_field(field_name):
             raise Exception("Field '{}' is not defined in model '{}'.".format(field_name, self._model))
@@ -383,13 +404,13 @@ class Entity(_ABC):
         del self._fields[field_name]
 
     def create_indexes(self):
-        """Create indices.
+        """Create indices
         """
         for index_data in self.indexes:
             self.collection.create_index(index_data[0], **index_data[1])
 
     def reindex(self):
-        """Rebuild indices.
+        """Rebuild indices
         """
         try:
             # Drop existing indices
@@ -404,7 +425,7 @@ class Entity(_ABC):
 
     @_abstractmethod
     def _setup_fields(self):
-        """Hook.
+        """Hook
         """
         pass
 
@@ -414,18 +435,18 @@ class Entity(_ABC):
         pass
 
     def _check_is_not_deleted(self):
-        """Raise an exception if the entity has 'deleted' state.
+        """Raise an exception if the entity has 'deleted' state
         """
         if self._is_deleted:
             raise _error.EntityDeleted(self.ref)
 
     def has_field(self, field_name: str) -> bool:
-        """Check if the entity has a field.
+        """Check if the entity has a field
         """
         return False if field_name not in self._fields else True
 
-    def get_field(self, field_name: str) -> _field.Abstract:
-        """Get field's object.
+    def get_field(self, field_name: str) -> _field.Base:
+        """Get field's object
         """
         if not self.has_field(field_name):
             raise _error.FieldNotDefined(self._model, field_name)
@@ -433,7 +454,7 @@ class Entity(_ABC):
         return self._fields[field_name]
 
     def f_set(self, field_name: str, value, **kwargs):
-        """Set field's value.
+        """Set field's value
         """
         field = self.get_field(field_name)
         field.set_val(self._on_f_set(field_name, value, **kwargs), **kwargs)
@@ -473,30 +494,27 @@ class Entity(_ABC):
         return self
 
     def _on_f_set(self, field_name: str, value, **kwargs):
-        """On set field's value hook.
+        """On set field's value hook
+        """
+        return value
+
+    def _on_f_get(self, field_name: str, value, **kwargs):
+        """On get field's value hook
         """
         return value
 
     def f_get(self, field_name: str, **kwargs):
-        """Get field's value.
+        """Get field's value
         """
-        # Get value
-        orig_val = self.get_field(field_name).get_val(**kwargs)
+        return self._on_f_get(field_name, self.get_field(field_name).get_val(**kwargs), **kwargs)
 
-        # Pass value through hook method
-        hooked_val = self._on_f_get(field_name, orig_val, **kwargs)
-        if orig_val is not None and hooked_val is None:
-            raise RuntimeWarning("_on_f_get() for field '{}.{}' returned None".format(self._model, field_name))
-
-        return hooked_val
-
-    def _on_f_get(self, field_name: str, value, **kwargs):
-        """On get field's value hook.
+    def f_get_prev(self, field_name: str, **kwargs) -> _Any:
+        """Get field's previous value
         """
-        return value
+        return self._on_f_get(field_name, self.get_field(field_name).get_prev_val(**kwargs), **kwargs)
 
     def f_add(self, field_name: str, value, **kwargs):
-        """Add a value to the field.
+        """Add a value to the field
         """
         value = self._on_f_add(field_name, value, **kwargs)
         field = self.get_field(field_name)
@@ -506,12 +524,12 @@ class Entity(_ABC):
         return self
 
     def _on_f_add(self, field_name: str, value, **kwargs):
-        """On field's add value hook.
+        """On field's add value hook
         """
         return value
 
     def f_sub(self, field_name: str, value, **kwargs):
-        """Subtract value from the field.
+        """Subtract value from the field
         """
         # Call hook
         value = self._on_f_sub(field_name, value, **kwargs)
@@ -524,12 +542,12 @@ class Entity(_ABC):
         return self
 
     def _on_f_sub(self, field_name: str, value, **kwargs) -> _Any:
-        """On field's subtract value hook.
+        """On field's subtract value hook
         """
         return value
 
     def f_inc(self, field_name: str, **kwargs):
-        """Increment value of the field.
+        """Increment value of the field
         """
         self._on_f_inc(field_name, **kwargs)
         field = self.get_field(field_name)
@@ -539,7 +557,7 @@ class Entity(_ABC):
         return self
 
     def _on_f_inc(self, field_name: str, **kwargs):
-        """On field's increment value hook.
+        """On field's increment value hook
         """
         pass
 
@@ -554,7 +572,7 @@ class Entity(_ABC):
         return self
 
     def _on_f_dec(self, field_name: str, **kwargs):
-        """On field's decrement value hook.
+        """On field's decrement value hook
         """
         pass
 
@@ -569,7 +587,7 @@ class Entity(_ABC):
         return self
 
     def _on_f_rst(self, field_name: str, **kwargs):
-        """On field's clear value hook.
+        """On field's clear value hook
         """
         pass
 
@@ -649,7 +667,7 @@ class Entity(_ABC):
         return descendant.is_descendant_of(self)
 
     def save(self, **kwargs):
-        """Save the entity.
+        """Save the entity
         """
         # Don't save entity if it wasn't changed
         if not (self._is_modified or kwargs.get('force')):
@@ -676,7 +694,7 @@ class Entity(_ABC):
 
         # Pre-save hook
         if kwargs.get('pre_hooks', True):
-            self._pre_save()
+            self._on_pre_save()
             _events.fire('odm@entity.pre_save', entity=self)
             _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
 
@@ -696,8 +714,8 @@ class Entity(_ABC):
 
         # After-save hook
         if kwargs.get('after_hooks', True):
-            self._after_save(first_save, **kwargs)
-            self._created(**kwargs) if first_save else self._modified(**kwargs)
+            self._on_after_save(first_save, **kwargs)
+            self._on_created(**kwargs) if first_save else self._on_modified(**kwargs)
             _events.fire('odm@entity.save', entity=self, first_save=first_save)
             _events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
 
@@ -717,22 +735,22 @@ class Entity(_ABC):
 
         return self
 
-    def _pre_save(self, **kwargs):
+    def _on_pre_save(self, **kwargs):
         """Pre save hook
         """
         pass
 
-    def _after_save(self, first_save: bool = False, **kwargs):
+    def _on_after_save(self, first_save: bool = False, **kwargs):
         """After save hook
         """
         pass
 
-    def _created(self, **kwargs):
+    def _on_created(self, **kwargs):
         """New entity created hook
         """
         pass
 
-    def _modified(self, **kwargs):
+    def _on_modified(self, **kwargs):
         """Existing entity modified hook
         """
         pass
@@ -750,7 +768,7 @@ class Entity(_ABC):
         # Pre delete events and hook
         _events.fire('odm@entity.pre_delete', entity=self)
         _events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
-        self._pre_delete(**kwargs)
+        self._on_pre_delete(**kwargs)
 
         # Search for entities that refers to this entity
         if not kwargs.get('force'):
@@ -799,8 +817,7 @@ class Entity(_ABC):
 
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
-        self._after_delete(**kwargs)
-        self._deleted(**kwargs)
+        self._on_after_delete(**kwargs)
         _events.fire('odm@entity.delete', entity=self)
         _events.fire('odm@entity.delete.{}'.format(self._model), entity=self)
 
@@ -809,17 +826,12 @@ class Entity(_ABC):
 
         return self
 
-    def _pre_delete(self, **kwargs):
+    def _on_pre_delete(self, **kwargs):
         """Pre delete hook
         """
         pass
 
-    def _after_delete(self, **kwargs):
-        """After delete hook
-        """
-        pass
-
-    def _deleted(self, **kwargs):
+    def _on_after_delete(self, **kwargs):
         """After delete hook
         """
         pass
@@ -835,7 +847,7 @@ class Entity(_ABC):
                 continue
 
             # Required fields should be filled
-            if check_required_fields and f.required and f.is_empty:
+            if check_required_fields and f.is_required and f.is_empty:
                 raise _error.RequiredFieldEmpty(self._model, f_name)
 
             r[f_name] = f.get_storable_val()

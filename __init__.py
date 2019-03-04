@@ -33,6 +33,22 @@ def plugin_load():
 def plugin_update(v_from: _semver.Version):
     from pytsite import console
 
+    if v_from < '1.4':
+        from pytsite import mongodb
+
+        for collection_name in mongodb.get_collection_names():
+            collection = mongodb.get_collection(collection_name)
+            for doc in collection.find():
+                if '_ref' in doc:
+                    continue
+
+                doc['_ref'] = '{}:{}'.format(doc['_model'], doc['_id'])
+                collection.replace_one({'_id': doc['_id']}, doc)
+                console.print_info('Document {} updated'.format(doc['_ref']))
+
+    if v_from < '1.6':
+        console.run_command('odm:reindex')
+
     if v_from < '4.0':
         # Update all entities that have `Ref` and `RefsList` fields
         for m in get_registered_models():
@@ -50,18 +66,5 @@ def plugin_update(v_from: _semver.Version):
                     e.save(update_timestamp=False)
                     console.print_info('Entity {} updated, fields {}'.format(e, fields_to_update))
 
-    elif v_from < '1.4':
-        from pytsite import mongodb
-
-        for collection_name in mongodb.get_collection_names():
-            collection = mongodb.get_collection(collection_name)
-            for doc in collection.find():
-                if '_ref' in doc:
-                    continue
-
-                doc['_ref'] = '{}:{}'.format(doc['_model'], doc['_id'])
-                collection.replace_one({'_id': doc['_id']}, doc)
-                console.print_info('Document {} updated'.format(doc['_ref']))
-
-    elif v_from < '1.6':
+    if v_from < '6.0':
         console.run_command('odm:reindex')

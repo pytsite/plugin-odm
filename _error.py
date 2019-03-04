@@ -8,10 +8,15 @@ from pytsite import errors as _errors
 
 
 class Error(Exception):
+    """General exception
+    """
     pass
 
 
 class ModelAlreadyRegistered(Error):
+    """Model is already registered exception
+    """
+
     def __init__(self, model: str):
         self._model = model
 
@@ -20,6 +25,9 @@ class ModelAlreadyRegistered(Error):
 
 
 class ModelNotRegistered(Error):
+    """Model is not registered exception
+    """
+
     def __init__(self, model: str):
         self._model = model
 
@@ -28,6 +36,9 @@ class ModelNotRegistered(Error):
 
 
 class UnknownCollection(Error):
+    """Unknown collection exception
+    """
+
     def __init__(self, collection: str):
         self._collection = collection
 
@@ -36,6 +47,9 @@ class UnknownCollection(Error):
 
 
 class InvalidReference(Error):
+    """Invalid reference exception
+    """
+
     def __init__(self, ref):
         self._ref = ref
 
@@ -44,6 +58,9 @@ class InvalidReference(Error):
 
 
 class EntityNotFound(Error, _errors.NotFound):
+    """Entity is not found exception
+    """
+
     def __init__(self, model: str, eid: str):
         self._model = model
         self._eid = eid
@@ -61,6 +78,9 @@ class EntityNotFound(Error, _errors.NotFound):
 
 
 class EntityNotStored(Error):
+    """Entity is not stored exception
+    """
+
     def __init__(self, model: str):
         self._model = model
 
@@ -69,6 +89,9 @@ class EntityNotStored(Error):
 
 
 class FieldNotDefined(Error):
+    """Field is not defined exception
+    """
+
     def __init__(self, model: str, field_name: str):
         super().__init__()
 
@@ -80,6 +103,9 @@ class FieldNotDefined(Error):
 
 
 class EntityDeleted(Error):
+    """Entity is deleted exception
+    """
+
     def __init__(self, ref: str):
         super().__init__()
 
@@ -90,6 +116,9 @@ class EntityDeleted(Error):
 
 
 class RequiredFieldEmpty(Error):
+    """Required field is empty exception
+    """
+
     def __init__(self, model: str, field_name: str):
         super().__init__()
 

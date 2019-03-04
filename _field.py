@@ -14,7 +14,7 @@ from frozendict import frozendict as _frozendict
 from pytsite import lang as _lang, util as _util, validation as _validation, formatters as _formatters
 
 
-class Abstract:
+class Base:
     """Base ODM Field
     """
 
@@ -25,16 +25,16 @@ class Abstract:
         return self._is_storable
 
     @property
-    def required(self) -> bool:
+    def is_required(self) -> bool:
         """Get if the field is required
         """
-        return self._required
+        return self._is_required
 
-    @required.setter
-    def required(self, value: bool):
+    @is_required.setter
+    def is_required(self, value: bool):
         """Set if the field is required
         """
-        self._required = value
+        self._is_required = value
 
     @property
     def is_empty(self) -> bool:
@@ -73,6 +73,18 @@ class Abstract:
         self._default = value
         self.rst_val()
 
+    @property
+    def required(self):
+        """Get if the field is required
+        """
+        raise DeprecationWarning('This property is deprecated since version 6.0, please use is_required() instead')
+
+    @required.setter
+    def required(self, value: bool):
+        """Set if the field is required
+        """
+        raise DeprecationWarning('This property is deprecated since version 6.0, please use is_required() instead')
+
     def __init__(self, name: str, **kwargs):
         """Init
 
@@ -80,26 +92,24 @@ class Abstract:
         :param required: bool
         :param default
         """
+        if 'required' in kwargs:
+            raise DeprecationWarning("'required' arg is deprecated since version 6.0, please use 'is_required' instead")
+
         self._name = name
         self._default = kwargs.get('default')
-        self._required = kwargs.get('required', False)
+        self._is_required = kwargs.get('is_required', False)
         self._is_storable = kwargs.get('is_storable', True)
         self._is_modified = False
-
+        self._prev_value = None
         self._value = None
 
         if self._default is not None:
-            self.rst_val(init=True, update_state=False)
+            self.rst_val(update_state=False)
 
-    def _on_get_storable(self, value, **kwargs):
-        """Hook
-        """
-        return value
-
-    def get_storable_val(self, **kwargs) -> _Any:
+    def get_storable_val(self) -> _Any:
         """Get value of the field which can be safely saved in the storage
         """
-        return self._on_get_storable(self._value, **kwargs)
+        return self._value
 
     def _on_get(self, value, **kwargs):
         """Hook. Transforms internal value for external representation
@@ -111,12 +121,17 @@ class Abstract:
         """
         return self._on_get(self._value, **kwargs)
 
-    def _on_get_jsonable(self, value, **kwargs):
+    def get_prev_val(self, **kwargs) -> _Any:
+        """Get previous value of the field
+        """
+        return self._on_get(self._prev_value, **kwargs)
+
+    def _on_get_jsonable(self, value, **kwargs) -> _Any:
         """Hook
         """
         return value
 
-    def as_jsonable(self, **kwargs) -> _Union[int, str, float, bool, dict, tuple, list]:
+    def as_jsonable(self, **kwargs) -> _Any:
         """Get JSONable representation of field's value
         """
         return self._on_get_jsonable(self._value, **kwargs)
@@ -129,11 +144,18 @@ class Abstract:
     def set_val(self, value, **kwargs):
         """Set value of the field
         """
-        prev_value = self._value
-        self._value = self._on_set(value, **kwargs)
+        self._prev_value = self._value
 
-        if kwargs.get('update_state', True) and prev_value != self._value:
+        if not kwargs.get('skip_hooks'):
+            value = self._on_set(value, **kwargs)
+
+        self._value = value
+
+        if kwargs.get('update_state', True) and self._prev_value != self._value:
             self._is_modified = True
+
+        if kwargs.get('reflect_prev_val'):
+            self._prev_value = self._value
 
         return self
 
@@ -145,7 +167,7 @@ class Abstract:
     def rst_val(self, **kwargs):
         """Reset field's value to default
         """
-        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), **kwargs)
+        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), reflect_prev_val=True, **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val()
@@ -212,7 +234,7 @@ class Abstract:
         return str(self.get_val())
 
 
-class Virtual(Abstract):
+class Virtual(Base):
     """Virtual Field
     """
 
@@ -220,7 +242,7 @@ class Virtual(Abstract):
         super().__init__(name, is_storable=False, **kwargs)
 
 
-class ObjectId(Abstract):
+class ObjectId(Base):
     """ObjectID Field
     """
 
@@ -233,17 +255,20 @@ class ObjectId(Abstract):
         return raw_value
 
 
-class List(Abstract):
+class List(Base):
     """List Field
     """
 
     def __init__(self, name: str, **kwargs):
         """Init
         """
+        if 'unique' in kwargs:
+            raise DeprecationWarning("'unique' arg is deprecated since version 6.0, please use 'is_unique' instead")
+
         self._allowed_types = kwargs.get('allowed_types', (int, str, float, list, dict, tuple))
         self._min_len = kwargs.get('min_len')
         self._max_len = kwargs.get('max_len')
-        self._unique = kwargs.get('unique', False)
+        self._is_unique = kwargs.get('is_unique', False)
         self._cleanup = kwargs.get('cleanup', True)
 
         kwargs.setdefault('default', [])
@@ -279,7 +304,7 @@ class List(Abstract):
                                     .format(self.name, type(v), self._allowed_types))
 
         # Uniquize value
-        if self._unique:
+        if self._is_unique:
             clean_val = []
             for v in raw_value:
                 if v and v not in clean_val:
@@ -312,7 +337,7 @@ class List(Abstract):
         r = current_value
 
         # Checking for unique value
-        if self._unique:
+        if self._is_unique:
             if raw_value_to_add not in r:
                 r.append(raw_value_to_add)
         else:
@@ -348,10 +373,10 @@ class UniqueList(List):
     def __init__(self, name: str, **kwargs):
         """Init.
         """
-        super().__init__(name, unique=True, **kwargs)
+        super().__init__(name, is_unique=True, **kwargs)
 
 
-class Dict(Abstract):
+class Dict(Base):
     """Dictionary Field
     """
 
@@ -423,7 +448,7 @@ class Dict(Abstract):
         return current_value
 
 
-class Enum(Abstract):
+class Enum(Base):
     """Enumerated field
     """
 
@@ -448,7 +473,7 @@ class Enum(Abstract):
         return self._values
 
 
-class Ref(Abstract):
+class Ref(Base):
     """Reference List
     """
 
@@ -597,7 +622,7 @@ class RefsList(List):
             if self._model_cls and not isinstance(entity, self._model_cls):
                 raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
 
-            if not self._unique or (self._unique and entity.ref not in r):
+            if not self._is_unique or (self._is_unique and entity.ref not in r):
                 r.append(entity.ref)
 
         return r
@@ -669,10 +694,10 @@ class RefsUniqueList(RefsList):
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        super().__init__(name, unique=True, **kwargs)
+        super().__init__(name, is_unique=True, **kwargs)
 
 
-class DateTime(Abstract):
+class DateTime(Base):
     """Datetime Field
     """
 
@@ -717,7 +742,7 @@ class DateTime(Abstract):
         return _util.w3c_datetime_str(value)
 
 
-class String(Abstract):
+class String(Base):
     """String Field
     """
 
@@ -815,16 +840,15 @@ class String(Abstract):
                 raw_value = _util.tidyfy_html(raw_value, self._remove_empty_html_tags)
 
         # Checks lengths only value set not by constructor
-        if not kwargs.get('init'):
-            if self._min_length:
-                v_msg_id = 'odm@validation_field_string_min_length'
-                v_msg_args = {'field': self.name}
-                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
+        if self._min_length:
+            v_msg_id = 'odm@validation_field_string_min_length'
+            v_msg_args = {'field': self.name}
+            _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
 
-            if self._max_length:
-                v_msg_id = 'odm@validation_field_string_max_length'
-                v_msg_args = {'field': self.name}
-                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
+        if self._max_length:
+            v_msg_id = 'odm@validation_field_string_max_length'
+            v_msg_args = {'field': self.name}
+            _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
 
         return raw_value
 
@@ -840,7 +864,7 @@ class Email(String):
         return _validation.rule.Email(raw_value, v_msg_id, v_msg_args).validate()
 
 
-class Integer(Abstract):
+class Integer(Base):
     """Integer Field
     """
 
@@ -881,7 +905,7 @@ class Integer(Abstract):
             return int(arg)
 
 
-class Decimal(Abstract):
+class Decimal(Base):
     """Decimal Field
     """
 
@@ -904,7 +928,7 @@ class Decimal(Abstract):
         super().__init__(name, **kwargs)
 
     def _on_get(self, value, **kwargs) -> _Decimal:
-        """Get storable value of the field
+        """Get value of the field
         """
         return _Decimal(value)
 
@@ -956,7 +980,7 @@ class Decimal(Abstract):
             return float(arg)
 
 
-class Bool(Abstract):
+class Bool(Base):
     """Integer Field
     """
 
