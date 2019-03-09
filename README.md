@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.1 (2019-03-09)
+
+New method `model.Entity.replace_field()` added.
+
+
 ### 6.0 (2019-03-04)
 
 - `field.Abstract` class renamed to `Base`.

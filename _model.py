@@ -403,6 +403,13 @@ class Entity(_ABC):
 
         del self._fields[field_name]
 
+        return self
+
+    def replace_field(self, field_name: str, replacement: _field.Base):
+        """Shortcut method
+        """
+        return self.remove_field(field_name).define_field(replacement)
+
     def create_indexes(self):
         """Create indices
         """
