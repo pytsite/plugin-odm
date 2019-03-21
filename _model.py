@@ -786,7 +786,7 @@ class Entity(_ABC):
                     if not isinstance(field, (_field.Ref, _field.RefsList)):
                         continue
 
-                    if field.model != '*' and self.model != field.model:
+                    if field.model and self.model not in field.model:
                         continue
 
                     if field.model_cls and not issubclass(self.__class__, field.model_cls):

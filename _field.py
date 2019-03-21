@@ -5,7 +5,8 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional, Iterable as _Iterable, \
-    Type as _Type
+    Type as _Type, Tuple as _Tuple
+from inspect import isclass as _isclass
 from datetime import datetime as _datetime
 from decimal import Decimal as _Decimal
 from copy import deepcopy as _deepcopy
@@ -480,19 +481,29 @@ class Ref(Base):
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        self._model = kwargs.get('model', '*')
-        self._model_cls = kwargs.get('model_cls')  # type: _Optional[_Type]
+        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
+        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+
+        if isinstance(self._model, str):
+            self._model = (self._model,)
+        elif not isinstance(self._model, tuple):
+            self._model = tuple(self._model)
+
+        if _isclass(self._model_cls):
+            self._model_cls = (self._model_cls,)
+        elif not isinstance(self._model, tuple):
+            self._model_cls = tuple(self._model_cls)
 
         super().__init__(name, **kwargs)
 
     @property
-    def model(self) -> str:
+    def model(self) -> _Tuple[str]:
         """Get model
         """
         return self._model
 
     @property
-    def model_cls(self) -> _Optional[_Type]:
+    def model_cls(self) -> _Tuple[_Type]:
         """Get model class
         """
         return self._model_cls
@@ -519,11 +530,11 @@ class Ref(Base):
         entity = get_by_ref(raw_value)
 
         # Check entity's model
-        if self._model not in ('*', entity.model):
-            raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
+        if self._model and entity.model not in self._model:
+            raise TypeError("Entity of models {} expected, got '{}'".format(self._model, entity.model))
 
         # Check entity's class
-        if self._model_cls and not isinstance(entity, self._model_cls):
+        if self._model_cls and entity.__class__ not in self._model_cls:
             raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
 
         return entity.ref
@@ -575,19 +586,29 @@ class RefsList(List):
         """
         from ._model import Entity
 
-        self._model = kwargs.get('model', '*')
-        self._model_cls = kwargs.get('model_cls')  # type: _Optional[_Type]
+        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
+        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+
+        if isinstance(self._model, str):
+            self._model = (self._model,)
+        elif not isinstance(self._model, tuple):
+            self._model = tuple(self._model)
+
+        if _isclass(self._model_cls):
+            self._model_cls = (self._model_cls,)
+        elif not isinstance(self._model, tuple):
+            self._model_cls = tuple(self._model_cls)
 
         super().__init__(name, allowed_types=(Entity,), **kwargs)
 
     @property
-    def model(self) -> str:
+    def model(self) -> _Tuple[str]:
         """Get model
         """
         return self._model
 
     @property
-    def model_cls(self) -> _Optional[_Type]:
+    def model_cls(self) -> _Tuple[_Type]:
         """Get model class
         """
         return self._model_cls
@@ -615,11 +636,11 @@ class RefsList(List):
             entity = get_by_ref(v)
 
             # Check entity's model
-            if self._model not in ('*', entity.model):
+            if self._model and entity.model not in self._model:
                 raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
 
             # Check entity's class
-            if self._model_cls and not isinstance(entity, self._model_cls):
+            if self._model_cls and entity.__class__ not in self._model_cls:
                 raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
 
             if not self._is_unique or (self._is_unique and entity.ref not in r):
@@ -655,9 +676,9 @@ class RefsList(List):
         from ._model import Entity
 
         if isinstance(raw_value_to_add, Entity):
-            if self._model not in ('*', raw_value_to_add.model):
-                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_add.model))
-            if self._model_cls and not isinstance(raw_value_to_add, self._model_cls):
+            if self._model and raw_value_to_add.model not in self._model:
+                raise TypeError("Entity of models {} expected, got '{}'".format(self._model, raw_value_to_add.model))
+            if self._model_cls and raw_value_to_add.__class__ not in self._model_cls:
                 raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_add)))
         else:
             raise TypeError("Entity expected, got '{}'".format(type(raw_value_to_add)))
@@ -670,9 +691,9 @@ class RefsList(List):
         from ._model import Entity
 
         if isinstance(raw_value_to_sub, Entity):
-            if self._model not in ('*', raw_value_to_sub.model):
-                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, raw_value_to_sub.model))
-            if self._model_cls and not isinstance(raw_value_to_sub, self._model_cls):
+            if self._model and raw_value_to_sub.model not in self._model:
+                raise TypeError("Entity of models {} expected, got '{}'".format(self._model, raw_value_to_sub.model))
+            if self._model_cls and raw_value_to_sub.__class__ not in self._model_cls:
                 raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_sub)))
         else:
             raise TypeError("Entity expected")

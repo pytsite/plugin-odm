@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 6.2 (2019-03-21)
+
+Support of multiple values of `model` property of `field.Ref` and 
+`fieldRefsList`.
+
+
 ### 6.1 (2019-03-09)
 
 New method `model.Entity.replace_field()` added.
