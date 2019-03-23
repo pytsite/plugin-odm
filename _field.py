@@ -889,10 +889,29 @@ class Integer(Base):
     """Integer Field
     """
 
+    @property
+    def minimum(self) -> _Optional[int]:
+        return self._minimum
+
+    @minimum.setter
+    def minimum(self, value: int):
+        self._minimum = value
+
+    @property
+    def maximum(self) -> _Optional[int]:
+        return self._maximum
+
+    @maximum.setter
+    def maximum(self, value: int):
+        self._maximum = value
+
     def __init__(self, name: str, **kwargs):
         """Init
         """
         kwargs.setdefault('default', 0)
+
+        self._minimum = kwargs.get('minimum')
+        self._maximum = kwargs.get('maximum')
 
         super().__init__(name, **kwargs)
 
@@ -904,6 +923,12 @@ class Integer(Base):
 
         if not isinstance(raw_value, int):
             raw_value = int(raw_value)
+
+        if self._minimum is not None and raw_value < self._minimum:
+            raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+
+        if self._maximum is not None and raw_value > self._maximum:
+            raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
 
         return raw_value
 
@@ -930,12 +955,48 @@ class Decimal(Base):
     """Decimal Field
     """
 
+    @property
+    def minimum(self) -> _Optional[int]:
+        return self._minimum
+
+    @minimum.setter
+    def minimum(self, value: int):
+        self._minimum = value
+
+    @property
+    def maximum(self) -> _Optional[int]:
+        return self._maximum
+
+    @maximum.setter
+    def maximum(self, value: int):
+        self._maximum = value
+
+    @property
+    def round(self) -> _Optional[int]:
+        return self._round
+
+    @round.setter
+    def round(self, value: int):
+        self._round = value
+
+    @property
+    def precision(self) -> int:
+        return self._precision
+
+    @precision.setter
+    def precision(self, value: int):
+        self._precision = value
+
     def __init__(self, name: str, **kwargs):
         """Init
 
+        :type minimum: float
+        :type maximum: float
         :type precision: int
         :type round: int
         """
+        self._minimum = kwargs.get('minimum')
+        self._maximum = kwargs.get('maximum')
         self._precision = kwargs.get('precision', 28)
         self._round = kwargs.get('round')
 
@@ -969,6 +1030,12 @@ class Decimal(Base):
 
         if self._round:
             raw_value = round(raw_value, self._round)
+
+        if self._minimum is not None and raw_value < self._minimum:
+            raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+
+        if self._maximum is not None and raw_value > self._maximum:
+            raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
 
         return raw_value
 

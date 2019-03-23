@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 6.3 (2019-03-23)
+
+New properties `minimum` and `maximum` added to `Integer` and `Decimal` 
+fields.
+
+
 ### 6.2 (2019-03-21)
 
 Support of multiple values of `model` property of `field.Ref` and 
