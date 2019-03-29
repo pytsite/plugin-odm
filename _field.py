@@ -88,10 +88,6 @@ class Base:
 
     def __init__(self, name: str, **kwargs):
         """Init
-
-        :param storable: bool
-        :param required: bool
-        :param default
         """
         if 'required' in kwargs:
             raise DeprecationWarning("'required' arg is deprecated since version 6.0, please use 'is_required' instead")
@@ -154,8 +150,7 @@ class Base:
 
         if kwargs.get('update_state', True) and self._prev_value != self._value:
             self._is_modified = True
-
-        if kwargs.get('reflect_prev_val'):
+        else:
             self._prev_value = self._value
 
         return self
@@ -168,7 +163,7 @@ class Base:
     def rst_val(self, **kwargs):
         """Reset field's value to default
         """
-        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), reflect_prev_val=True, **kwargs)
+        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val()

@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 6.4 (2019-03-29)
+
+- New hook method `model.Entity._on_f_modified()` added. 
+- `reflect_prev_val` arg removed from `field.Base.set_val()`.
+
+
 ### 6.3 (2019-03-23)
 
 New properties `minimum` and `maximum` added to `Integer` and `Decimal` 

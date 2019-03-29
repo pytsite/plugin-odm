@@ -337,7 +337,7 @@ class Entity(_ABC):
                     continue
 
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
-                field.set_val(f_value, skip_hooks=True, update_state=False, reflect_prev_val=True)
+                field.set_val(f_value, skip_hooks=True, update_state=False)
             except _error.FieldNotDefined:
                 # Fields definition may be removed from version to version, so just ignore non-existent fields
                 pass
@@ -504,6 +504,11 @@ class Entity(_ABC):
         """On set field's value hook
         """
         return value
+
+    def _on_f_modified(self, field_name: str, prev_value: _Any, value: _Any):
+        """On modify field's value hook
+        """
+        pass
 
     def _on_f_get(self, field_name: str, value, **kwargs):
         """On get field's value hook
@@ -721,6 +726,11 @@ class Entity(_ABC):
 
         # After-save hook
         if kwargs.get('after_hooks', True):
+            # Call '_on_f_modified' hooks
+            for f in self._fields.values():
+                if f.is_modified:
+                    self._on_f_modified(f.name, f.get_prev_val(), f.get_val())
+
             self._on_after_save(first_save, **kwargs)
             self._on_created(**kwargs) if first_save else self._on_modified(**kwargs)
             _events.fire('odm@entity.save', entity=self, first_save=first_save)
