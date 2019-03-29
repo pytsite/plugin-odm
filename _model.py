@@ -706,6 +706,11 @@ class Entity(_ABC):
 
         # Pre-save hook
         if kwargs.get('pre_hooks', True):
+            # Call '_on_f_modified' hookss
+            for f in self._fields.values():
+                if f.is_modified:
+                    self._on_f_modified(f.name, f.get_prev_val(), f.get_val())
+
             self._on_pre_save()
             _events.fire('odm@entity.pre_save', entity=self)
             _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
@@ -726,11 +731,6 @@ class Entity(_ABC):
 
         # After-save hook
         if kwargs.get('after_hooks', True):
-            # Call '_on_f_modified' hooks
-            for f in self._fields.values():
-                if f.is_modified:
-                    self._on_f_modified(f.name, f.get_prev_val(), f.get_val())
-
             self._on_after_save(first_save, **kwargs)
             self._on_created(**kwargs) if first_save else self._on_modified(**kwargs)
             _events.fire('odm@entity.save', entity=self, first_save=first_save)

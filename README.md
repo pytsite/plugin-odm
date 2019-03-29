@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.4.1 (2019-03-29)
+
+Call order of `model.Entity._on_f_modified()` moved to `pre_save` stage. 
+
+
 ### 6.4 (2019-03-29)
 
 - New hook method `model.Entity._on_f_modified()` added. 
