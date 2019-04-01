@@ -4,9 +4,10 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Any as _Any, Dict as _Dict, List as _List, Tuple as _Tuple, Union as _Union
+from typing import Any as _Any, Dict as _Dict, List as _List, Tuple as _Tuple, Union as _Union, Generator as _Generator
 from abc import ABC as _ABC, abstractmethod as _abstractmethod
 from collections import OrderedDict as _OrderedDict
+from copy import deepcopy as _deepcopy
 from datetime import datetime as _datetime
 from pymongo import ASCENDING as I_ASC, DESCENDING as I_DESC, GEO2D as I_GEO2D, TEXT as I_TEXT, GEOSPHERE as I_GEOSPHERE
 from bson.objectid import ObjectId as _ObjectId
@@ -32,6 +33,8 @@ _DEPRECATED_METHODS = {
 class Entity(_ABC):
     """ODM Entity
     """
+    _collection_name = None
+    _history_fields = None  # type: _List[str]
 
     @property
     def indexes(self) -> list:
@@ -170,6 +173,20 @@ class Entity(_ABC):
         self.f_set('_modified', value)
 
     @property
+    def history(self) -> _Generator:
+        """Get entity change history
+        """
+        for row in self.f_get('_history'):
+            for f_name, f_vals in row[1].items():
+                f = _deepcopy(self.get_field(f_name))
+                row[1][f_name] = [
+                    f.set_val(row[1][f_name][0], skip_hooks=True, update_state=False).get_val(),
+                    f.set_val(row[1][f_name][1], skip_hooks=True, update_state=False).get_val(),
+                ]
+
+            yield row
+
+    @property
     def is_new(self) -> bool:
         """Is the entity stored in the database?
         """
@@ -267,7 +284,7 @@ class Entity(_ABC):
         """Init
         """
         # Define collection name if it wasn't specified
-        if not hasattr(self, '_collection_name'):
+        if not self._collection_name:
             self._collection_name = _lang.english_plural(model)
 
         self._model = model
@@ -290,6 +307,10 @@ class Entity(_ABC):
         self.define_field(_field.Integer('_depth'))
         self.define_field(_field.DateTime('_created', default=_datetime.now()))
         self.define_field(_field.DateTime('_modified', default=_datetime.now()))
+
+        # Define field to store changes of other fields
+        if self._history_fields:
+            self.define_field(_field.List('_history'))
 
         # Setup fields
         self._setup_fields()
@@ -525,6 +546,24 @@ class Entity(_ABC):
         """
         return self._on_f_get(field_name, self.get_field(field_name).get_prev_val(**kwargs), **kwargs)
 
+    def f_history_get(self, field_name: str):
+        """Get history of the field's value changes
+        """
+        f = _deepcopy(self.get_field(field_name))
+
+        r = []
+        for row in self.f_get('_history'):
+            if field_name not in row[1]:
+                continue
+
+            r.append((
+                row[0],
+                f.set_val(row[1][field_name][0], skip_hooks=True, update_state=False).get_val(),
+                f.set_val(row[1][field_name][1], skip_hooks=True, update_state=False).get_val(),
+            ))
+
+        return r
+
     def f_add(self, field_name: str, value, **kwargs):
         """Add a value to the field
         """
@@ -706,10 +745,19 @@ class Entity(_ABC):
 
         # Pre-save hook
         if kwargs.get('pre_hooks', True):
-            # Call '_on_f_modified' hookss
+
+            history = {}
             for f in self._fields.values():
                 if f.is_modified:
+                    # Call '_on_f_modified' hooks
                     self._on_f_modified(f.name, f.get_prev_val(), f.get_val())
+
+                    # Append history
+                    if self._history_fields and f.name in self._history_fields:
+                        history[f.name] = [f.get_storable_prev_val(), f.get_storable_val()]
+
+            if history:
+                self.f_add('_history', [_datetime.now(), history])
 
             self._on_pre_save()
             _events.fire('odm@entity.pre_save', entity=self)

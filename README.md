@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.5 (2019-04-02)
+
+Fields values history added. 
+
+
 ### 6.4.1 (2019-03-29)
 
 Call order of `model.Entity._on_f_modified()` moved to `pre_save` stage. 

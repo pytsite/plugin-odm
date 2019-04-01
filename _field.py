@@ -108,6 +108,11 @@ class Base:
         """
         return self._value
 
+    def get_storable_prev_val(self) -> _Any:
+        """Get previous value of the field which can be safely saved in the storage
+        """
+        return self._prev_value
+
     def _on_get(self, value, **kwargs):
         """Hook. Transforms internal value for external representation
         """
@@ -439,7 +444,7 @@ class Dict(Base):
         try:
             current_value.update(dict(raw_value_to_add))
         except ValueError:
-            raise TypeError("Value of the field '{}' must be a dict.".format(self._name))
+            raise TypeError("Value of the field '{}' must be a dict".format(self._name))
 
         return current_value
 
