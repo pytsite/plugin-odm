@@ -523,7 +523,10 @@ class MultiModelFinder(Finder):
         """
         # Add operator to every finder
         for f in self._finders:
-            f.add(op)
+            try:
+                f.add(op)
+            except _error.FieldNotDefined:
+                pass
 
         return self
 

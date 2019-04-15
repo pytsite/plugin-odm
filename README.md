@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.5.1 (2019-04-15)
+
+Missing fields skip added in `MultiModelFinder`.
+
+
 ### 6.5 (2019-04-02)
 
 Fields values history added. 
