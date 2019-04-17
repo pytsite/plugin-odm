@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.5.2 (2019-04-18)
+
+Initial default value of `field.DateTime` removed.
+
+
 ### 6.5.1 (2019-04-15)
 
 Missing fields skip added in `MultiModelFinder`.

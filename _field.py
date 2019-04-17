@@ -722,18 +722,11 @@ class DateTime(Base):
     """Datetime Field
     """
 
-    def __init__(self, name: str, **kwargs):
-        """Init
-        """
-        kwargs.setdefault('default', _datetime(1970, 1, 1))
-
-        super().__init__(name, **kwargs)
-
-    def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _datetime:
+    def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _Optional[_datetime]:
         """Set field's value
         """
-        if raw_value is None:
-            return _datetime.fromtimestamp(0)
+        if not raw_value:
+            return None
 
         if not isinstance(raw_value, _datetime):
             raise TypeError("DateTime expected, got '{}'".format(type(raw_value)))
@@ -747,7 +740,7 @@ class DateTime(Base):
         """Get field's value
         """
         fmt = kwargs.get('fmt')
-        if fmt:
+        if value and fmt:
             if fmt == 'ago':
                 value = _lang.time_ago(value)
             elif fmt == 'pretty_date':
