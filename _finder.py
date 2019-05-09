@@ -375,11 +375,11 @@ class Finder(_ABC):
 
         return result[0]
 
-    def delete(self):
+    def delete(self, force: bool = False):
         """Delete all the entities matching search criteria
         """
         for entity in self.get():
-            entity.delete()
+            entity.delete(force=force)
 
         return self
 

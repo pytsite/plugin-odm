@@ -270,10 +270,15 @@ class Entity(_ABC):
         """
         return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
 
-    def __str__(self):
-        """__str__ overloading
+    def __str__(self) -> str:
+        """__str__()
         """
         return self.ref
+
+    def __repr__(self) -> str:
+        """__repr__()
+        """
+        return '<{}.{}:{}>'.format(self.__module__, self.__class__.__name__, self.id)
 
     def __eq__(self, other) -> bool:
         """__eq__ overloading
@@ -658,12 +663,16 @@ class Entity(_ABC):
         :type child: Entity
         """
         if child.is_new:
-            raise RuntimeError('Entity should be saved before it can be a child')
+            raise RuntimeError('Entity must be saved before it can be a child')
 
         if child == self:
             raise RuntimeError('Entity cannot be child of itself')
 
-        self._pending_children.append(child.f_set('_parent', self).f_set('_depth', self.depth + 1))
+        child.f_set('_parent', self)
+        child.f_set('_depth', self.depth + 1)
+        self._pending_children.append(child)
+
+        self._is_modified = True
 
         return self
 

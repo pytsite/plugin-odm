@@ -4,6 +4,14 @@
 ## Changelog
 
 
+### 6.6 (2019-05-09)
+
+- New arg `force` added to `Finder.delete()`.
+- `Entity.__repr__()` implemented.
+- Entities relationship management fixed.
+- Errors in `List` and `String`'s `rst_val()` fixed.
+
+
 ### 6.5.2 (2019-04-18)
 
 Initial default value of `field.DateTime` removed.

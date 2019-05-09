@@ -168,7 +168,7 @@ class Base:
     def rst_val(self, **kwargs):
         """Reset field's value to default
         """
-        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), **kwargs)
+        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), reset=True, **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val()
@@ -313,10 +313,11 @@ class List(Base):
             raw_value = clean_val
 
         # Checking lengths
-        if self._min_len is not None and len(raw_value) < self._min_len:
-            raise ValueError("Value length cannot be less than {}.".format(self._min_len))
-        if self._max_len is not None and len(raw_value) > self._max_len:
-            raise ValueError("Value length cannot be more than {}.".format(self._max_len))
+        if not kwargs.get('reset'):
+            if self._min_len is not None and len(raw_value) < self._min_len:
+                raise ValueError("Value length cannot be less than {}.".format(self._min_len))
+            if self._max_len is not None and len(raw_value) > self._max_len:
+                raise ValueError("Value length cannot be more than {}.".format(self._max_len))
 
         # Cleaning up empty string values
         if self._cleanup:
@@ -426,15 +427,17 @@ class Dict(Base):
         if self._dotted_keys:
             raw_value = {k.replace('.', self._dotted_keys_replacement): v for k, v in raw_value.items()}
 
-        if self._keys:
-            for k in self._keys:
-                if k not in raw_value:
-                    raise ValueError("Value of the field '{}' must contain key '{}'.".format(self._name, k))
+        if not kwargs.get('reset'):
+            if self._keys:
+                for k in self._keys:
+                    if k not in raw_value:
+                        raise ValueError("Value of the field '{}' must contain key '{}'.".format(self._name, k))
 
-        if self._nonempty_keys:
-            for k in self._nonempty_keys:
-                if k not in raw_value or raw_value[k] is None:
-                    raise ValueError("Value of the field '{}' must contain nonempty key '{}'.".format(self._name, k))
+            if self._nonempty_keys:
+                for k in self._nonempty_keys:
+                    if k not in raw_value or raw_value[k] is None:
+                        raise ValueError(
+                            "Value of the field '{}' must contain nonempty key '{}'.".format(self._name, k))
 
         return raw_value
 
@@ -853,16 +856,17 @@ class String(Base):
             elif self._tidyfy_html:
                 raw_value = _util.tidyfy_html(raw_value, self._remove_empty_html_tags)
 
-        # Checks lengths only value set not by constructor
-        if self._min_length:
-            v_msg_id = 'odm@validation_field_string_min_length'
-            v_msg_args = {'field': self.name}
-            _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
+        # Checks lengths
+        if not kwargs.get('reset'):
+            if self._min_length:
+                v_msg_id = 'odm@validation_field_string_min_length'
+                v_msg_args = {'field': self.name}
+                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
 
-        if self._max_length:
-            v_msg_id = 'odm@validation_field_string_max_length'
-            v_msg_args = {'field': self.name}
-            _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
+            if self._max_length:
+                v_msg_id = 'odm@validation_field_string_max_length'
+                v_msg_args = {'field': self.name}
+                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
 
         return raw_value
 
@@ -917,11 +921,12 @@ class Integer(Base):
         if not isinstance(raw_value, int):
             raw_value = int(raw_value)
 
-        if self._minimum is not None and raw_value < self._minimum:
-            raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+        if not kwargs.get('reset'):
+            if self._minimum is not None and raw_value < self._minimum:
+                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
 
-        if self._maximum is not None and raw_value > self._maximum:
-            raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
+            if self._maximum is not None and raw_value > self._maximum:
+                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
 
         return raw_value
 
@@ -1024,11 +1029,12 @@ class Decimal(Base):
         if self._round:
             raw_value = round(raw_value, self._round)
 
-        if self._minimum is not None and raw_value < self._minimum:
-            raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+        if not kwargs.get('reset'):
+            if self._minimum is not None and raw_value < self._minimum:
+                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
 
-        if self._maximum is not None and raw_value > self._maximum:
-            raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
+            if self._maximum is not None and raw_value > self._maximum:
+                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
 
         return raw_value
 
