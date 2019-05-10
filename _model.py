@@ -180,8 +180,8 @@ class Entity(_ABC):
             for f_name, f_vals in row[1].items():
                 f = _deepcopy(self.get_field(f_name))
                 row[1][f_name] = [
-                    f.set_val(row[1][f_name][0], skip_hooks=True, update_state=False).get_val(),
-                    f.set_val(row[1][f_name][1], skip_hooks=True, update_state=False).get_val(),
+                    f.set_storable_val(row[1][f_name][0]).get_val(),
+                    f.set_storable_val(row[1][f_name][1]).get_val(),
                 ]
 
             yield row
@@ -363,9 +363,9 @@ class Entity(_ABC):
                     continue
 
                 field.uid = '{}.{}.{}'.format(self._model, eid, f_name)
-                field.set_val(f_value, skip_hooks=True, update_state=False)
+                field.set_storable_val(f_value)
             except _error.FieldNotDefined:
-                # Fields definition may be removed from version to version, so just ignore non-existent fields
+                # Fields definition may be changed from version to version, so just ignore non-existent fields
                 pass
 
         # In versions prior to 1.4 field '_ref' didn't exist, so we need to check it
@@ -563,8 +563,8 @@ class Entity(_ABC):
 
             r.append((
                 row[0],
-                f.set_val(row[1][field_name][0], skip_hooks=True, update_state=False).get_val(),
-                f.set_val(row[1][field_name][1], skip_hooks=True, update_state=False).get_val(),
+                f.set_storable_val(row[1][field_name][0]).get_val(),
+                f.set_storable_val(row[1][field_name][1]).get_val(),
             ))
 
         return r

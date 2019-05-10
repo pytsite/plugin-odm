@@ -103,6 +103,11 @@ class Base:
         if self._default is not None:
             self.rst_val(update_state=False)
 
+    def set_storable_val(self, value: _Any):
+        """Must be used to set value which can be safely stored directly to the database
+        """
+        self._value = value
+
     def get_storable_val(self) -> _Any:
         """Get value of the field which can be safely saved in the storage
         """
@@ -114,7 +119,7 @@ class Base:
         return self._prev_value
 
     def _on_get(self, value, **kwargs):
-        """Hook. Transforms internal value for external representation
+        """Hook, transforms internal storable value to its external representation
         """
         return value
 
@@ -139,7 +144,7 @@ class Base:
         return self._on_get_jsonable(self._value, **kwargs)
 
     def _on_set(self, raw_value, **kwargs):
-        """Hook
+        """Hook, transforms externally set value to its storable representation
         """
         return raw_value
 
@@ -148,10 +153,7 @@ class Base:
         """
         self._prev_value = self._value
 
-        if not kwargs.get('skip_hooks'):
-            value = self._on_set(value, **kwargs)
-
-        self._value = value
+        self._value = self._on_set(value, **kwargs)
 
         if kwargs.get('update_state', True) and self._prev_value != self._value:
             self._is_modified = True
@@ -171,44 +173,44 @@ class Base:
         return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), reset=True, **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
-        """Hook, called by self.add_val()
+        """Hook, called by self.add_val(), must return external value representation
         """
-        return current_value + raw_value_to_add
+        raise NotImplementedError("Value of the field '{}' cannot be added".format(self._name))
 
     def add_val(self, value_to_add, **kwargs):
         """Add a value to the field
         """
-        return self.set_val(self._on_add(self._value, value_to_add, **kwargs), **kwargs)
+        return self.set_val(self._on_add(self.get_val(), value_to_add, **kwargs), **kwargs)
 
     def _on_sub(self, current_value, raw_value_to_sub, **kwargs):
-        """Hook, called by self.sub_val()
+        """Hook, called by self.sub_val(), must return external value representation
         """
-        return current_value - raw_value_to_sub
+        raise NotImplementedError("Value of the field '{}' cannot be subtracted".format(self._name))
 
     def sub_val(self, value_to_sub, **kwargs):
         """Subtract a value from the field
         """
-        return self.set_val(self._on_sub(self._value, value_to_sub, **kwargs), **kwargs)
+        return self.set_val(self._on_sub(self.get_val(), value_to_sub, **kwargs), **kwargs)
 
     def _on_inc(self, **kwargs):
-        """Hook, called by self.inc_val()
+        """Hook, called by self.inc_val(), must return external value representation
         """
         raise NotImplementedError("Value of the field '{}' cannot be incremented".format(self._name))
 
     def inc_val(self, **kwargs):
         """Increment the value of the field
         """
-        return self.set_val(self._value + self._on_inc(**kwargs), **kwargs)
+        return self.set_val(self.get_val() + self._on_inc(**kwargs), **kwargs)
 
     def _on_dec(self, **kwargs):
-        """Hook, called by self.dec_val()
+        """Hook, called by self.dec_val(), must return external value representation
         """
         raise NotImplementedError("Value of the field '{}' cannot be decremented".format(self._name))
 
     def dec_val(self, **kwargs):
         """Decrement the value of the field
         """
-        return self.set_val(self._value - self._on_dec(**kwargs), **kwargs)
+        return self.set_val(self.get_val() - self._on_dec(**kwargs), **kwargs)
 
     def _on_entity_delete(self, entity):
         """Hook
@@ -251,234 +253,13 @@ class ObjectId(Base):
         """Hook
         """
         if not (raw_value is None or isinstance(raw_value, _ObjectId)):
-            raise TypeError('ObjectId expected, got {}'.format(type(raw_value)))
+            raise TypeError('ObjectId expected, not {}'.format(type(raw_value)))
 
         return raw_value
-
-
-class List(Base):
-    """List Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init
-        """
-        if 'unique' in kwargs:
-            raise DeprecationWarning("'unique' arg is deprecated since version 6.0, please use 'is_unique' instead")
-
-        self._allowed_types = kwargs.get('allowed_types', (int, str, float, list, dict, tuple))
-        self._min_len = kwargs.get('min_len')
-        self._max_len = kwargs.get('max_len')
-        self._is_unique = kwargs.get('is_unique', False)
-        self._cleanup = kwargs.get('cleanup', True)
-
-        kwargs.setdefault('default', [])
-
-        super().__init__(name, **kwargs)
-
-    def _on_get(self, value, **kwargs) -> tuple:
-        """Get value of the field.
-        """
-        return tuple(value)
-
-    def _on_set(self, raw_value, **kwargs) -> list:
-        """Set value of the field.
-
-        :type raw_value: list | tuple
-        """
-        if raw_value is None:
-            return []
-
-        if not isinstance(raw_value, (list, tuple)):
-            raise TypeError(
-                "Field '{}': list or tuple expected, got {}: {}".format(self._name, type(raw_value), raw_value))
-
-        # Internal value is always a list
-        if isinstance(raw_value, tuple):
-            raw_value = list(raw_value)
-
-        # Checking validness of types of the items
-        if self._allowed_types:
-            for v in raw_value:
-                if not isinstance(v, self._allowed_types):
-                    raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}."
-                                    .format(self.name, type(v), self._allowed_types))
-
-        # Uniquize value
-        if self._is_unique:
-            clean_val = []
-            for v in raw_value:
-                if v and v not in clean_val:
-                    clean_val.append(v)
-            raw_value = clean_val
-
-        # Checking lengths
-        if not kwargs.get('reset'):
-            if self._min_len is not None and len(raw_value) < self._min_len:
-                raise ValueError("Value length cannot be less than {}.".format(self._min_len))
-            if self._max_len is not None and len(raw_value) > self._max_len:
-                raise ValueError("Value length cannot be more than {}.".format(self._max_len))
-
-        # Cleaning up empty string values
-        if self._cleanup:
-            raw_value = _util.cleanup_list(raw_value)
-
-        return raw_value
-
-    def _on_add(self, current_value: list, raw_value_to_add, **kwargs) -> list:
-        """Add a value to the field.
-        """
-        if not isinstance(raw_value_to_add, self._allowed_types):
-            raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}.".
-                            format(self._name, type(raw_value_to_add), self._allowed_types))
-
-        # Checking length
-        if self._max_len is not None and (len(current_value) + 1) > self._max_len:
-            raise ValueError("Value length cannot be more than {}.".format(self._max_len))
-
-        r = current_value
-
-        # Checking for unique value
-        if self._is_unique:
-            if raw_value_to_add not in r:
-                r.append(raw_value_to_add)
-        else:
-            if self._cleanup:
-                # Cleaning up empty string values
-                if isinstance(raw_value_to_add, str):
-                    raw_value_to_add = raw_value_to_add.strip()
-                if raw_value_to_add:
-                    r.append(raw_value_to_add)
-            else:
-                r.append(raw_value_to_add)
-
-        return r
-
-    def _on_sub(self, current_value: list, raw_value_to_sub, **kwargs) -> list:
-        """Subtract value from list
-        """
-        if not isinstance(raw_value_to_sub, self._allowed_types):
-            raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}.".
-                            format(self._name, type(raw_value_to_sub), self._allowed_types))
-
-        # Checking length
-        if self._min_len is not None and len(current_value) == self._min_len:
-            raise ValueError("Value length cannot be less than {}.".format(self._min_len))
-
-        return [v for v in current_value if v != raw_value_to_sub]
-
-
-class UniqueList(List):
-    """Unique List Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init.
-        """
-        super().__init__(name, is_unique=True, **kwargs)
-
-
-class Dict(Base):
-    """Dictionary Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init
-
-        :param default: dict
-        :param keys: tuple
-        :param nonempty_keys: tuple
-        """
-        self._keys = kwargs.get('keys', ())  # Required keys
-        self._nonempty_keys = kwargs.get('nonempty_keys', ())  # Required keys which must be non-empty
-        self._dotted_keys = kwargs.get('dotted_keys', False)
-        self._dotted_keys_replacement = kwargs.get('dotted_keys_replacement', ':')
-
-        kwargs.setdefault('default', {})
-
-        super().__init__(name, **kwargs)
-
-    def _on_get(self, value: dict, **kwargs) -> _frozendict:
-        """Hook
-        """
-        if self._dotted_keys:
-            new_value = {}
-            for k, v in value.items():
-                new_value[k.replace(self._dotted_keys_replacement, '.')] = v
-
-            value = new_value
-
-        # Don't allow to change value outside the field's object
-        return _frozendict(value)
-
-    def _on_set(self, raw_value: _Union[dict, _frozendict], **kwargs) -> dict:
-        """Hook
-        """
-        if raw_value is None:
-            return {}
-
-        if type(raw_value) not in (dict, _frozendict):
-            raise TypeError("Value of the field '{}' should be a dict. Got '{}'.".format(self._name, type(raw_value)))
-
-        # Internally this field stores ordinary dict
-        if isinstance(raw_value, _frozendict):
-            raw_value = dict(raw_value)
-
-        if self._dotted_keys:
-            raw_value = {k.replace('.', self._dotted_keys_replacement): v for k, v in raw_value.items()}
-
-        if not kwargs.get('reset'):
-            if self._keys:
-                for k in self._keys:
-                    if k not in raw_value:
-                        raise ValueError("Value of the field '{}' must contain key '{}'.".format(self._name, k))
-
-            if self._nonempty_keys:
-                for k in self._nonempty_keys:
-                    if k not in raw_value or raw_value[k] is None:
-                        raise ValueError(
-                            "Value of the field '{}' must contain nonempty key '{}'.".format(self._name, k))
-
-        return raw_value
-
-    def _on_add(self, current_value: dict, raw_value_to_add, **kwargs) -> dict:
-        """Add a value to the field.
-        """
-        try:
-            current_value.update(dict(raw_value_to_add))
-        except ValueError:
-            raise TypeError("Value of the field '{}' must be a dict".format(self._name))
-
-        return current_value
-
-
-class Enum(Base):
-    """Enumerated field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init
-        """
-        self._values = kwargs.get('values')
-        if not hasattr(self._values, '__iter__'):
-            raise TypeError("'values' must be an iterable, got {}".format(type(self._values)))
-
-        super().__init__(name, **kwargs)
-
-    def _on_set(self, raw_value, **kwargs):
-        if raw_value and raw_value not in self._values:
-            raise ValueError("Value of the field '{}' can be only one of the following: {}"
-                             .format(self.name, self._values))
-
-        return raw_value
-
-    @property
-    def values(self) -> _Iterable:
-        return self._values
 
 
 class Ref(Base):
-    """Reference List
+    """Reference
     """
 
     def __init__(self, name: str, **kwargs):
@@ -514,10 +295,6 @@ class Ref(Base):
     def _on_set(self, raw_value, **kwargs) -> _Optional[str]:
         """Hook
         """
-        # Trust any data from database
-        if kwargs.get('from_db'):
-            return raw_value
-
         if not raw_value:
             return None
 
@@ -534,11 +311,11 @@ class Ref(Base):
 
         # Check entity's model
         if self._model and entity.model not in self._model:
-            raise TypeError("Entity of models {} expected, got '{}'".format(self._model, entity.model))
+            raise TypeError("Entity of models {} expected, not '{}'".format(self._model, entity.model))
 
         # Check entity's class
         if self._model_cls and entity.__class__ not in self._model_cls:
-            raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
+            raise TypeError('Instance of {} expected, not {}'.format(self._model_cls, type(entity)))
 
         return entity.ref
 
@@ -554,7 +331,7 @@ class Ref(Base):
         return get_by_ref(value)
 
     def _on_get_jsonable(self, value, **kwargs):
-        """Get serializable representation of the field's value.
+        """Get serializable representation of the field's value
         """
         return '_ref:{}:{}'.format(value.collection, value.id) if value else None
 
@@ -580,183 +357,221 @@ class Ref(Base):
         return arg
 
 
-class RefsList(List):
-    """List of References Field
+class Bool(Base):
+    """Integer Field
     """
 
     def __init__(self, name: str, **kwargs):
         """Init.
         """
-        from ._model import Entity
+        kwargs.setdefault('default', False)
 
-        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
-        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+        super().__init__(name, **kwargs)
 
-        if isinstance(self._model, str):
-            self._model = (self._model,)
-        elif not isinstance(self._model, tuple):
-            self._model = tuple(self._model)
-
-        if _isclass(self._model_cls):
-            self._model_cls = (self._model_cls,)
-        elif not isinstance(self._model, tuple):
-            self._model_cls = tuple(self._model_cls)
-
-        super().__init__(name, allowed_types=(Entity,), **kwargs)
-
-    @property
-    def model(self) -> _Tuple[str]:
-        """Get model
+    def _on_set(self, raw_value, **kwargs) -> bool:
+        """Set value of the field.
         """
-        return self._model
+        return bool(raw_value)
 
-    @property
-    def model_cls(self) -> _Tuple[_Type]:
-        """Get model class
+    def sanitize_finder_arg(self, arg) -> bool:
+        """Hook used for sanitizing Finder's query argument
         """
-        return self._model_cls
-
-    def _on_set(self, raw_value, **kwargs) -> _List[str]:
-        """Set value of the field
-        """
-        # Trust all data from database
-        if kwargs.get('from_db'):
-            return raw_value
-
-        if raw_value is None:
-            return []
-
-        if not isinstance(raw_value, (list, tuple)):
-            raise TypeError(
-                "List or tuple expected as a value of the field '{}', got '{}'".format(self._name, repr(raw_value)))
-
-        from ._api import get_by_ref
-
-        # Check value
-        r = []
-        for v in raw_value:
-            # Check entity existence
-            entity = get_by_ref(v)
-
-            # Check entity's model
-            if self._model and entity.model not in self._model:
-                raise TypeError("Entity of model '{}' expected, got '{}'".format(self._model, entity.model))
-
-            # Check entity's class
-            if self._model_cls and entity.__class__ not in self._model_cls:
-                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(entity)))
-
-            if not self._is_unique or (self._is_unique and entity.ref not in r):
-                r.append(entity.ref)
-
-        return r
-
-    def _on_get(self, value: _List[str], **kwargs):
-        """Get value of the field
-
-        :rtype: _List[odm.model.Entity, ...]
-        """
-        from ._api import get_by_ref
-
-        r = []
-        for ref in value:
-            r.append(get_by_ref(ref))
-
-        sort_by = kwargs.get('sort_by')
-        if sort_by:
-            r = sorted(r, key=lambda e: e.f_get(sort_by), reverse=kwargs.get('sort_reverse', False))
-
-        limit = kwargs.get('limit')
-        if limit is not None:
-            r = r[:limit]
-
-        return r
-
-    def _on_add(self, current_value: list, raw_value_to_add, **kwargs):
-        """Add a value to the field
-
-        """
-        from ._model import Entity
-
-        if isinstance(raw_value_to_add, Entity):
-            if self._model and raw_value_to_add.model not in self._model:
-                raise TypeError("Entity of models {} expected, got '{}'".format(self._model, raw_value_to_add.model))
-            if self._model_cls and raw_value_to_add.__class__ not in self._model_cls:
-                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_add)))
-        else:
-            raise TypeError("Entity expected, got '{}'".format(type(raw_value_to_add)))
-
-        return super()._on_add(current_value, raw_value_to_add, **kwargs)
-
-    def _on_sub(self, current_value: list, raw_value_to_sub, **kwargs):
-        """Subtract value fom the field.
-        """
-        from ._model import Entity
-
-        if isinstance(raw_value_to_sub, Entity):
-            if self._model and raw_value_to_sub.model not in self._model:
-                raise TypeError("Entity of models {} expected, got '{}'".format(self._model, raw_value_to_sub.model))
-            if self._model_cls and raw_value_to_sub.__class__ not in self._model_cls:
-                raise TypeError('Instance of {} expected, got {}'.format(self._model_cls, type(raw_value_to_sub)))
-        else:
-            raise TypeError("Entity expected")
-
-        return super()._on_sub(current_value, raw_value_to_sub, **kwargs)
-
-    def sanitize_finder_arg(self, arg):
-        """Hook. Used for sanitizing Finder's query argument.
-        """
-        from ._api import resolve_refs
-
-        return resolve_refs(arg if isinstance(arg, (list, tuple)) else (arg,))
+        return _formatters.Bool().format(arg)
 
 
-class RefsUniqueList(RefsList):
-    """Unique list of manual references field
+class Integer(Base):
+    """Integer Field
     """
+
+    @property
+    def minimum(self) -> _Optional[int]:
+        return self._minimum
+
+    @minimum.setter
+    def minimum(self, value: int):
+        self._minimum = value
+
+    @property
+    def maximum(self) -> _Optional[int]:
+        return self._maximum
+
+    @maximum.setter
+    def maximum(self, value: int):
+        self._maximum = value
 
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        super().__init__(name, is_unique=True, **kwargs)
+        kwargs.setdefault('default', 0)
 
+        self._minimum = kwargs.get('minimum')
+        self._maximum = kwargs.get('maximum')
 
-class DateTime(Base):
-    """Datetime Field
-    """
+        super().__init__(name, **kwargs)
 
-    def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _Optional[_datetime]:
-        """Set field's value
+    def _on_set(self, raw_value: int, **kwargs) -> int:
+        """Set value of the field
         """
-        if not raw_value:
-            return None
+        if raw_value is None:
+            return 0
 
-        if not isinstance(raw_value, _datetime):
-            raise TypeError("DateTime expected, got '{}'".format(type(raw_value)))
+        if not isinstance(raw_value, int):
+            raw_value = int(raw_value)
 
-        if raw_value.tzinfo:
-            raw_value = raw_value.replace(tzinfo=None)
+        if not kwargs.get('reset'):
+            if self._minimum is not None and raw_value < self._minimum:
+                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+
+            if self._maximum is not None and raw_value > self._maximum:
+                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
 
         return raw_value
 
-    def _on_get(self, value: _datetime, **kwargs) -> _Union[_datetime, str]:
-        """Get field's value
+    def _on_add(self, current_value: int, raw_value_to_add, **kwargs) -> int:
+        """Hook
         """
-        fmt = kwargs.get('fmt')
-        if value and fmt:
-            if fmt == 'ago':
-                value = _lang.time_ago(value)
-            elif fmt == 'pretty_date':
-                value = _lang.pretty_date(value)
-            elif fmt == 'pretty_date_time':
-                value = _lang.pretty_date_time(value)
-            else:
-                value = value.strftime(fmt)
+        return current_value + int(raw_value_to_add)
 
-        return value
+    def _on_sub(self, current_value: int, raw_value_to_sub: int, **kwargs) -> int:
+        """Hook
+        """
+        return current_value - int(raw_value_to_sub)
 
-    def _on_get_jsonable(self, value, **kwargs):
-        return _util.w3c_datetime_str(value)
+    def _on_inc(self, **kwargs) -> int:
+        """Hook
+        """
+        return 1
+
+    def _on_dec(self, **kwargs) -> int:
+        """Hook
+        """
+        return 1
+
+    def sanitize_finder_arg(self, arg) -> _Union[int, _List[int]]:
+        """Hook used for sanitizing Finder's query argument
+        """
+        if isinstance(arg, (set, list, tuple, dict)):
+            return [int(v) for v in arg]
+        else:
+            return int(arg)
+
+
+class Decimal(Base):
+    """Decimal Field
+    """
+
+    @property
+    def minimum(self) -> _Optional[int]:
+        return self._minimum
+
+    @minimum.setter
+    def minimum(self, value: int):
+        self._minimum = value
+
+    @property
+    def maximum(self) -> _Optional[int]:
+        return self._maximum
+
+    @maximum.setter
+    def maximum(self, value: int):
+        self._maximum = value
+
+    @property
+    def round(self) -> _Optional[int]:
+        return self._round
+
+    @round.setter
+    def round(self, value: int):
+        self._round = value
+
+    @property
+    def precision(self) -> int:
+        return self._precision
+
+    @precision.setter
+    def precision(self, value: int):
+        self._precision = value
+
+    def __init__(self, name: str, **kwargs):
+        """Init
+
+        :type minimum: float
+        :type maximum: float
+        :type precision: int
+        :type round: int
+        """
+        self._minimum = kwargs.get('minimum')
+        self._maximum = kwargs.get('maximum')
+        self._precision = kwargs.get('precision', 28)
+        self._round = kwargs.get('round')
+
+        default = kwargs.get('default', 0.0)
+
+        if self._round:
+            default = round(default, self._round)
+
+        kwargs.setdefault('default', default)
+
+        super().__init__(name, **kwargs)
+
+    def _on_get(self, value: float, **kwargs) -> _Decimal:
+        """Get value of the field
+        """
+        return _Decimal(value)
+
+    def _on_set(self, raw_value, **kwargs) -> float:
+        """Set value of the field.
+
+        :type raw_value: _Decimal | float | int | str
+        """
+        if raw_value is None:
+            return 0.0
+
+        if not isinstance(raw_value, float):
+            try:
+                raw_value = float(raw_value)
+            except ValueError:
+                raise TypeError("'{}' cannot be used as a value of the field '{}'".format(repr(raw_value), self.name))
+
+        if self._round:
+            raw_value = round(raw_value, self._round)
+
+        if not kwargs.get('reset'):
+            if self._minimum is not None and raw_value < self._minimum:
+                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+
+            if self._maximum is not None and raw_value > self._maximum:
+                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
+
+        return raw_value
+
+    def _on_add(self, current_value: _Decimal, raw_value_to_add, **kwargs) -> _Decimal:
+        """
+        :type raw_value_to_add: _Decimal | float | integer | str
+        """
+        try:
+            return current_value + _Decimal(raw_value_to_add)
+        except ValueError:
+            raise TypeError("'{}' cannot be used as a value of the field '{}'"
+                            .format(type(raw_value_to_add), self.name))
+
+    def _on_sub(self, current_value: _Decimal, raw_value_to_sub, **kwargs) -> _Decimal:
+        """
+        :type value: _Decimal | float | integer | str
+        """
+        try:
+            return current_value - _Decimal(raw_value_to_sub)
+        except ValueError:
+            raise TypeError("'{}' cannot be used as a value of the field '{}'"
+                            .format(type(raw_value_to_sub), self.name))
+
+    def sanitize_finder_arg(self, arg) -> _Union[float, _List[float]]:
+        """Hook used for sanitizing Finder's query argument
+        """
+        if isinstance(arg, (set, list, tuple, dict)):
+            return [float(v) for v in arg]
+        else:
+            return float(arg)
 
 
 class String(Base):
@@ -843,7 +658,7 @@ class String(Base):
             return ''
 
         if not isinstance(raw_value, str):
-            raise TypeError("Field '{}': string object expected, got {}.".format(self.name, type(raw_value)))
+            raise TypeError("Field '{}': string object expected, not {}.".format(self.name, type(raw_value)))
 
         raw_value = raw_value.strip()
 
@@ -871,242 +686,400 @@ class String(Base):
         return raw_value
 
 
-class Email(String):
-    """Email String Field
+class DateTime(Base):
+    """Datetime Field
     """
 
-    def _on_set(self, raw_value: str, **kwargs) -> str:
-        v_msg_id = 'odm@validation_field_email'
-        v_msg_args = {'field': self.name}
+    def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _Optional[_datetime]:
+        """Set field's value
+        """
+        if not raw_value:
+            return None
 
-        return _validation.rule.Email(raw_value, v_msg_id, v_msg_args).validate()
+        if not isinstance(raw_value, _datetime):
+            raise TypeError("DateTime expected, not '{}'".format(type(raw_value)))
+
+        if raw_value.tzinfo:
+            raw_value = raw_value.replace(tzinfo=None)
+
+        return raw_value
+
+    def _on_get(self, value: _datetime, **kwargs) -> _Union[_datetime, str]:
+        """Get field's value
+        """
+        fmt = kwargs.get('fmt')
+        if value and fmt:
+            if fmt == 'ago':
+                value = _lang.time_ago(value)
+            elif fmt == 'pretty_date':
+                value = _lang.pretty_date(value)
+            elif fmt == 'pretty_date_time':
+                value = _lang.pretty_date_time(value)
+            else:
+                value = value.strftime(fmt)
+
+        return value
+
+    def _on_get_jsonable(self, value, **kwargs):
+        return _util.w3c_datetime_str(value)
 
 
-class Integer(Base):
-    """Integer Field
+class List(Base):
+    """List Field
     """
-
-    @property
-    def minimum(self) -> _Optional[int]:
-        return self._minimum
-
-    @minimum.setter
-    def minimum(self, value: int):
-        self._minimum = value
-
-    @property
-    def maximum(self) -> _Optional[int]:
-        return self._maximum
-
-    @maximum.setter
-    def maximum(self, value: int):
-        self._maximum = value
 
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        kwargs.setdefault('default', 0)
+        if 'unique' in kwargs:
+            raise DeprecationWarning("'unique' arg is deprecated since version 6.0, please use 'is_unique' instead")
 
-        self._minimum = kwargs.get('minimum')
-        self._maximum = kwargs.get('maximum')
+        self._allowed_types = kwargs.get('allowed_types', (int, str, float, list, dict, tuple))
+        self._min_len = kwargs.get('min_len')
+        self._max_len = kwargs.get('max_len')
+        self._is_unique = kwargs.get('is_unique', False)
+        self._cleanup = kwargs.get('cleanup', True)
+
+        kwargs.setdefault('default', [])
 
         super().__init__(name, **kwargs)
 
-    def _on_set(self, raw_value: int, **kwargs) -> int:
+    def _on_get(self, value, **kwargs) -> tuple:
+        """Hook
+        """
+        return tuple(value)
+
+    def _on_set(self, raw_value, **kwargs) -> list:
+        """Hook
+
+        :type raw_value: list | tuple
+        """
+        if raw_value is None:
+            return []
+
+        if not isinstance(raw_value, (list, tuple)):
+            raise TypeError(
+                "Field '{}': list or tuple expected, not {}: {}".format(self._name, type(raw_value), raw_value))
+
+        # Internal value is always a list
+        if isinstance(raw_value, tuple):
+            raw_value = list(raw_value)
+
+        # Checking validness of types of the items
+        if self._allowed_types:
+            for v in raw_value:
+                if not isinstance(v, self._allowed_types):
+                    raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}."
+                                    .format(self.name, type(v), self._allowed_types))
+
+        # Uniquize value
+        if self._is_unique:
+            clean_val = []
+            for v in raw_value:
+                if v and v not in clean_val:
+                    clean_val.append(v)
+            raw_value = clean_val
+
+        # Checking lengths
+        if not kwargs.get('reset'):
+            if self._min_len is not None and len(raw_value) < self._min_len:
+                raise ValueError("Value length cannot be less than {}.".format(self._min_len))
+            if self._max_len is not None and len(raw_value) > self._max_len:
+                raise ValueError("Value length cannot be more than {}.".format(self._max_len))
+
+        # Cleaning up empty string values
+        if self._cleanup:
+            raw_value = _util.cleanup_list(raw_value)
+
+        return raw_value
+
+    def _on_add(self, current_value: tuple, raw_value_to_add, **kwargs) -> list:
+        """Add a value to the field.
+        """
+        if not isinstance(raw_value_to_add, self._allowed_types):
+            raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}.".
+                            format(self._name, type(raw_value_to_add), self._allowed_types))
+
+        # Checking length
+        if self._max_len is not None and (len(current_value) + 1) > self._max_len:
+            raise ValueError("Value length cannot be more than {}.".format(self._max_len))
+
+        r = list(current_value)
+
+        # Checking for unique value
+        if self._is_unique:
+            if raw_value_to_add not in r:
+                r.append(raw_value_to_add)
+        else:
+            if self._cleanup:
+                # Cleaning up empty string values
+                if isinstance(raw_value_to_add, str):
+                    raw_value_to_add = raw_value_to_add.strip()
+                if raw_value_to_add:
+                    r.append(raw_value_to_add)
+            else:
+                r.append(raw_value_to_add)
+
+        return r
+
+    def _on_sub(self, current_value: tuple, raw_value_to_sub, **kwargs) -> list:
+        """Subtract value from list
+        """
+        if not isinstance(raw_value_to_sub, self._allowed_types):
+            raise TypeError("Value of the field '{}' cannot contain members of type {}, but only {}.".
+                            format(self._name, type(raw_value_to_sub), self._allowed_types))
+
+        # Checking length
+        if self._min_len is not None and len(current_value) == self._min_len:
+            raise ValueError("Value length cannot be less than {}.".format(self._min_len))
+
+        return [v for v in current_value if v != raw_value_to_sub]
+
+
+class Dict(Base):
+    """Dictionary Field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init
+
+        :param default: dict
+        :param keys: tuple
+        :param nonempty_keys: tuple
+        """
+        self._keys = kwargs.get('keys', ())  # Required keys
+        self._nonempty_keys = kwargs.get('nonempty_keys', ())  # Required keys which must be non-empty
+        self._dotted_keys = kwargs.get('dotted_keys', False)
+        self._dotted_keys_replacement = kwargs.get('dotted_keys_replacement', ':')
+
+        kwargs.setdefault('default', {})
+
+        super().__init__(name, **kwargs)
+
+    def _on_get(self, value: dict, **kwargs) -> _frozendict:
+        """Hook
+        """
+        if self._dotted_keys:
+            new_value = {}
+            for k, v in value.items():
+                new_value[k.replace(self._dotted_keys_replacement, '.')] = v
+
+            value = new_value
+
+        # Don't allow to change value outside the field's object
+        return _frozendict(value)
+
+    def _on_set(self, raw_value: _Union[dict, _frozendict], **kwargs) -> dict:
+        """Hook
+        """
+        if raw_value is None:
+            return {}
+
+        if type(raw_value) not in (dict, _frozendict):
+            raise TypeError("Value of the field '{}' should be a dict. not '{}'.".format(self._name, type(raw_value)))
+
+        # Internally this field stores ordinary dict
+        if isinstance(raw_value, _frozendict):
+            raw_value = dict(raw_value)
+
+        if self._dotted_keys:
+            raw_value = {k.replace('.', self._dotted_keys_replacement): v for k, v in raw_value.items()}
+
+        if not kwargs.get('reset'):
+            if self._keys:
+                for k in self._keys:
+                    if k not in raw_value:
+                        raise ValueError("Value of the field '{}' must contain key '{}'.".format(self._name, k))
+
+            if self._nonempty_keys:
+                for k in self._nonempty_keys:
+                    if k not in raw_value or raw_value[k] is None:
+                        raise ValueError(
+                            "Value of the field '{}' must contain nonempty key '{}'.".format(self._name, k))
+
+        return raw_value
+
+    def _on_add(self, current_value: _frozendict, raw_value_to_add, **kwargs) -> dict:
+        """Add a value to the field.
+        """
+        try:
+            r = dict(current_value)
+            r.update(dict(raw_value_to_add))
+            return r
+        except ValueError:
+            raise TypeError("Value of the field '{}' must be a dict".format(self._name))
+
+
+class Enum(Base):
+    """Enumerated field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init
+        """
+        self._values = kwargs.get('values')
+        if not hasattr(self._values, '__iter__'):
+            raise TypeError("'values' must be an iterable, not {}".format(type(self._values)))
+
+        super().__init__(name, **kwargs)
+
+    def _on_set(self, raw_value, **kwargs):
+        if raw_value and raw_value not in self._values:
+            raise ValueError("Value of the field '{}' can be only one of the following: {}"
+                             .format(self.name, self._values))
+
+        return raw_value
+
+    @property
+    def values(self) -> _Iterable:
+        return self._values
+
+
+class UniqueList(List):
+    """Unique List Field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init.
+        """
+        super().__init__(name, is_unique=True, **kwargs)
+
+
+class RefsList(List):
+    """List of References Field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init.
+        """
+        from ._model import Entity
+
+        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
+        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+
+        if isinstance(self._model, str):
+            self._model = (self._model,)
+        elif not isinstance(self._model, tuple):
+            self._model = tuple(self._model)
+
+        if _isclass(self._model_cls):
+            self._model_cls = (self._model_cls,)
+        elif not isinstance(self._model, tuple):
+            self._model_cls = tuple(self._model_cls)
+
+        super().__init__(name, allowed_types=(Entity,), **kwargs)
+
+    @property
+    def model(self) -> _Tuple[str]:
+        """Get model
+        """
+        return self._model
+
+    @property
+    def model_cls(self) -> _Tuple[_Type]:
+        """Get model class
+        """
+        return self._model_cls
+
+    def _on_set(self, raw_value, **kwargs) -> _List[str]:
         """Set value of the field
         """
         if raw_value is None:
-            return 0
+            return []
 
-        if not isinstance(raw_value, int):
-            raw_value = int(raw_value)
+        if not isinstance(raw_value, (list, tuple)):
+            raise TypeError(
+                "List or tuple expected as a value of the field '{}', not '{}'".format(self._name, repr(raw_value)))
 
-        if not kwargs.get('reset'):
-            if self._minimum is not None and raw_value < self._minimum:
-                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
+        from ._api import get_by_ref
 
-            if self._maximum is not None and raw_value > self._maximum:
-                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
+        # Check value
+        r = []
+        for v in raw_value:
+            # Check entity existence
+            entity = get_by_ref(v)
 
-        return raw_value
+            # Check entity's model
+            if self._model and entity.model not in self._model:
+                raise TypeError("Entity of model '{}' expected, not '{}'".format(self._model, entity.model))
 
-    def _on_inc(self, **kwargs) -> int:
-        """Decrement field's value hook
+            # Check entity's class
+            if self._model_cls and entity.__class__ not in self._model_cls:
+                raise TypeError('Instance of {} expected, not {}'.format(self._model_cls, type(entity)))
+
+            if not self._is_unique or (self._is_unique and entity.ref not in r):
+                r.append(entity.ref)
+
+        return r
+
+    def _on_get(self, value: _List[str], **kwargs):
+        """Get value of the field
+
+        :rtype: _List[odm.model.Entity, ...]
         """
-        return 1
+        from ._api import get_by_ref
 
-    def _on_dec(self, **kwargs) -> int:
-        """Decrement field's value hook
-        """
-        return 1
+        r = []
+        for ref in value:
+            r.append(get_by_ref(ref))
 
-    def sanitize_finder_arg(self, arg) -> _Union[int, _List[int]]:
-        """Hook used for sanitizing Finder's query argument
+        sort_by = kwargs.get('sort_by')
+        if sort_by:
+            r = sorted(r, key=lambda e: e.f_get(sort_by), reverse=kwargs.get('sort_reverse', False))
+
+        limit = kwargs.get('limit')
+        if limit is not None:
+            r = r[:limit]
+
+        return r
+
+    def _on_add(self, current_value: tuple, raw_value_to_add, **kwargs):
+        """Add a value to the field
+
         """
-        if isinstance(arg, (set, list, tuple, dict)):
-            return [int(v) for v in arg]
+        from ._model import Entity
+
+        if isinstance(raw_value_to_add, Entity):
+            if self._model and raw_value_to_add.model not in self._model:
+                raise TypeError("Entity of models {} expected, not '{}'".format(self._model, raw_value_to_add.model))
+            if self._model_cls and raw_value_to_add.__class__ not in self._model_cls:
+                raise TypeError('Instance of {} expected, not {}'.format(self._model_cls, type(raw_value_to_add)))
         else:
-            return int(arg)
+            raise TypeError("Entity expected, not '{}'".format(type(raw_value_to_add)))
+
+        return super()._on_add(current_value, raw_value_to_add, **kwargs)
+
+    def _on_sub(self, current_value: tuple, raw_value_to_sub, **kwargs):
+        """Subtract value fom the field.
+        """
+        from ._model import Entity
+
+        if isinstance(raw_value_to_sub, Entity):
+            if self._model and raw_value_to_sub.model not in self._model:
+                raise TypeError("Entity of models {} expected, not '{}'".format(self._model, raw_value_to_sub.model))
+            if self._model_cls and raw_value_to_sub.__class__ not in self._model_cls:
+                raise TypeError('Instance of {} expected, not {}'.format(self._model_cls, type(raw_value_to_sub)))
+        else:
+            raise TypeError("Entity expected")
+
+        return super()._on_sub(current_value, raw_value_to_sub, **kwargs)
+
+    def sanitize_finder_arg(self, arg):
+        """Hook. Used for sanitizing Finder's query argument.
+        """
+        from ._api import resolve_refs
+
+        return resolve_refs(arg if isinstance(arg, (list, tuple)) else (arg,))
 
 
-class Decimal(Base):
-    """Decimal Field
+class RefsUniqueList(RefsList):
+    """Unique list of manual references field
     """
-
-    @property
-    def minimum(self) -> _Optional[int]:
-        return self._minimum
-
-    @minimum.setter
-    def minimum(self, value: int):
-        self._minimum = value
-
-    @property
-    def maximum(self) -> _Optional[int]:
-        return self._maximum
-
-    @maximum.setter
-    def maximum(self, value: int):
-        self._maximum = value
-
-    @property
-    def round(self) -> _Optional[int]:
-        return self._round
-
-    @round.setter
-    def round(self, value: int):
-        self._round = value
-
-    @property
-    def precision(self) -> int:
-        return self._precision
-
-    @precision.setter
-    def precision(self, value: int):
-        self._precision = value
 
     def __init__(self, name: str, **kwargs):
         """Init
-
-        :type minimum: float
-        :type maximum: float
-        :type precision: int
-        :type round: int
         """
-        self._minimum = kwargs.get('minimum')
-        self._maximum = kwargs.get('maximum')
-        self._precision = kwargs.get('precision', 28)
-        self._round = kwargs.get('round')
-
-        default = kwargs.get('default', 0.0)
-
-        if self._round:
-            default = round(default, self._round)
-
-        kwargs.setdefault('default', default)
-
-        super().__init__(name, **kwargs)
-
-    def _on_get(self, value, **kwargs) -> _Decimal:
-        """Get value of the field
-        """
-        return _Decimal(value)
-
-    def _on_set(self, raw_value, **kwargs) -> float:
-        """Set value of the field.
-
-        :type raw_value: _Decimal | float | int | str
-        """
-        if raw_value is None:
-            return 0.0
-
-        if not isinstance(raw_value, float):
-            try:
-                raw_value = float(raw_value)
-            except ValueError:
-                raise TypeError("'{}' cannot be used as a value of the field '{}'".format(repr(raw_value), self.name))
-
-        if self._round:
-            raw_value = round(raw_value, self._round)
-
-        if not kwargs.get('reset'):
-            if self._minimum is not None and raw_value < self._minimum:
-                raise ValueError("Value of the field '{}' cannot be less than {}".format(self._name, self._minimum))
-
-            if self._maximum is not None and raw_value > self._maximum:
-                raise ValueError("Value of the field '{}' cannot be greater than {}".format(self._name, self._maximum))
-
-        return raw_value
-
-    def _on_add(self, current_value: float, raw_value_to_add, **kwargs) -> float:
-        """
-        :type raw_value_to_add: _Decimal | float | integer | str
-        """
-        try:
-            return float(_Decimal(current_value) + _Decimal(raw_value_to_add))
-        except ValueError:
-            raise TypeError("'{}' cannot be used as a value of the field '{}'"
-                            .format(repr(raw_value_to_add), self.name))
-
-    def _on_sub(self, current_value, raw_value_to_sub, **kwargs) -> float:
-        """
-        :type value: _Decimal | float | integer | str
-        """
-        try:
-            return float(_Decimal(current_value) - _Decimal(raw_value_to_sub))
-        except ValueError:
-            raise TypeError("'{}' cannot be used as a value of the field '{}'"
-                            .format(repr(raw_value_to_sub), self.name))
-
-    def sanitize_finder_arg(self, arg) -> _Union[float, _List[float]]:
-        """Hook used for sanitizing Finder's query argument
-        """
-        if isinstance(arg, (set, list, tuple, dict)):
-            return [float(v) for v in arg]
-        else:
-            return float(arg)
-
-
-class Bool(Base):
-    """Integer Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init.
-        """
-        kwargs.setdefault('default', False)
-
-        super().__init__(name, **kwargs)
-
-    def _on_set(self, raw_value, **kwargs) -> bool:
-        """Set value of the field.
-        """
-        return bool(raw_value)
-
-    def sanitize_finder_arg(self, arg) -> bool:
-        """Hook used for sanitizing Finder's query argument
-        """
-        return _formatters.Bool().format(arg)
-
-
-class StringList(List):
-    """List of Strings Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init.
-        """
-        super().__init__(name, allowed_types=(str,), **kwargs)
-
-
-class UniqueStringList(UniqueList):
-    """Unique String List Field
-    """
-
-    def __init__(self, name: str, **kwargs):
-        """Init.
-        """
-        super().__init__(name, allowed_types=(str,), **kwargs)
+        super().__init__(name, is_unique=True, **kwargs)
 
 
 class IntegerList(List):
@@ -1147,13 +1120,31 @@ class DecimalList(List):
 
         return raw_value
 
-    def _on_add(self, current_value: list, raw_value_to_add, **kwargs):
-        raw_value_to_add = float(raw_value_to_add) if not isinstance(raw_value_to_add, float) else raw_value_to_add
-        return super()._on_add(current_value, raw_value_to_add, **kwargs)
+    def _on_add(self, current_value: tuple, raw_value_to_add, **kwargs):
+        return super()._on_add(current_value, _Decimal(raw_value_to_add), **kwargs)
 
-    def _on_sub(self, current_value: list, raw_value_to_sub, **kwargs):
-        raw_value_to_sub = float(raw_value_to_sub) if not isinstance(raw_value_to_sub, float) else raw_value_to_sub
-        return super()._on_sub(current_value, float(raw_value_to_sub), **kwargs)
+    def _on_sub(self, current_value: tuple, raw_value_to_sub, **kwargs):
+        return super()._on_sub(current_value, _Decimal(raw_value_to_sub), **kwargs)
+
+
+class StringList(List):
+    """List of Strings Field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init.
+        """
+        super().__init__(name, allowed_types=(str,), **kwargs)
+
+
+class UniqueStringList(UniqueList):
+    """Unique String List Field
+    """
+
+    def __init__(self, name: str, **kwargs):
+        """Init.
+        """
+        super().__init__(name, allowed_types=(str,), **kwargs)
 
 
 class ListList(List):
@@ -1164,3 +1155,14 @@ class ListList(List):
         """Init.
         """
         super().__init__(name, allowed_types=(list, tuple), **kwargs)
+
+
+class Email(String):
+    """Email String Field
+    """
+
+    def _on_set(self, raw_value: str, **kwargs) -> str:
+        v_msg_id = 'odm@validation_field_email'
+        v_msg_args = {'field': self.name}
+
+        return _validation.rule.Email(raw_value, v_msg_id, v_msg_args).validate()

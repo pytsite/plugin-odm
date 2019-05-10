@@ -4,6 +4,14 @@
 ## Changelog
 
 
+### 6.7 (2019-05-10)
+
+- New method `field.Base.set_storable_val()` added.
+- Expected behaviour of `field.Base._on_add()` and 
+  `field.Base._on_sub()` changed.
+- Errors in `field.RefsList` fixed.
+
+
 ### 6.6 (2019-05-09)
 
 - New arg `force` added to `Finder.delete()`.
