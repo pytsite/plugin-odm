@@ -1,24 +1,23 @@
 """PytSite ODM Plugin Queue
 """
-
 __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from pymongo import errors as _pymonog_errors
-from bson import errors as _bson_errors
-from pytsite import mongodb as _db, queue as _queue, logger as _logger, cache as _cache, reg as _reg
+from pymongo.errors import PyMongoError
+from bson import errors as bson_errors
+from pytsite import mongodb, queue, logger, cache, reg
 
-_QUEUE = _queue.Queue('odm')
-_ENTITIES_CACHE = _cache.get_pool('odm.entities')
-_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
+_QUEUE = queue.Queue('odm')
+_ENTITIES_CACHE = cache.get_pool('odm.entities')
+_CACHE_TTL = reg.get('odm.cache_ttl', 86400)
 
 
 def _entity_save(args: dict):
     """Save an entity
     """
     fields_data = args['fields_data']
-    collection = _db.get_collection(args['collection_name'])
+    collection = mongodb.get_collection(args['collection_name'])
 
     # Save data to the database
     try:
@@ -34,21 +33,21 @@ def _entity_save(args: dict):
         c_key = '{}.{}'.format(fields_data['_model'], fields_data['_id'])
         _ENTITIES_CACHE.put_hash(c_key, fields_data, _CACHE_TTL)
 
-    except (_bson_errors.BSONError, _pymonog_errors.PyMongoError) as e:
-        _logger.error(e)
-        _logger.error('Document dump: {}'.format(fields_data))
+    except (bson_errors.BSONError, PyMongoError) as e:
+        logger.error(e)
+        logger.error('Document dump: {}'.format(fields_data))
         raise e
 
 
 def _entity_delete(args: dict):
     # Delete from DB
-    _db.get_collection(args['collection_name']).delete_one({'_id': args['_id']})
+    mongodb.get_collection(args['collection_name']).delete_one({'_id': args['_id']})
 
     # Update cache
     _ENTITIES_CACHE.rm('{}.{}'.format(args['model'], args['_id']))
 
 
-def put(op: str, args: dict) -> _queue.Queue:
+def put(op: str, args: dict) -> queue.Queue:
     """Enqueue a task
     """
     if op == 'entity_save':

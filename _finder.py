@@ -4,22 +4,22 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import List as _List, Tuple as _Tuple, Union as _Union, Callable as _Callable, Optional as _Optional
-from abc import ABC as _ABC, abstractmethod as _abstractmethod
-from copy import deepcopy as _deepcopy
-from bson import DBRef as _DBRef
-from pymongo.cursor import Cursor as _Cursor, CursorType as _CursorType
-from pytsite import util as _util, reg as _reg, cache as _cache
-from plugins import query as _query
+from typing import List, Tuple, Union, Callable, Optional
+from abc import ABC, abstractmethod
+from copy import deepcopy
+from bson import DBRef
+from pymongo.cursor import Cursor, CursorType
+from pytsite import util, reg, cache
+from plugins import query as qu
 from . import _model, _api, _odm_query, _error
 
-_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)  # 24 hours
+_CACHE_TTL = reg.get('odm.cache_ttl', 86400)  # 24 hours
 
-_ResultProcessor = _Callable[[_model.Entity], _model.Entity]
+_ResultProcessor = Callable[[_model.Entity], _model.Entity]
 
 
-class Result(_ABC):
-    @_abstractmethod
+class Result(ABC):
+    @abstractmethod
     def count(self) -> int:
         raise NotImplementedError()
 
@@ -36,8 +36,8 @@ class SingleModelResult(Result):
     """Finder Result
     """
 
-    def __init__(self, model: str, count: int, cursor: _Cursor = None, cached_ids: _List[str] = None,
-                 process: _ResultProcessor = None, cache_ttl: int = None, cache_pool: _cache.Pool = None,
+    def __init__(self, model: str, count: int, cursor: Cursor = None, cached_ids: List[str] = None,
+                 process: _ResultProcessor = None, cache_ttl: int = None, cache_pool: cache.Pool = None,
                  finder_id: str = None):
         """Init
         """
@@ -107,7 +107,7 @@ class SingleModelResult(Result):
 
 
 class MultiModelResult(Result):
-    def __init__(self, results: _List[SingleModelResult], limit: int = 0):
+    def __init__(self, results: List[SingleModelResult], limit: int = 0):
         self._results = results
         self._results_count = len(results)
         self._current_result_index = 0
@@ -142,11 +142,11 @@ class MultiModelResult(Result):
         return sum([len(r) for r in self._results])
 
 
-class Finder(_ABC):
-    def __init__(self, query: _query.Query = None):
+class Finder(ABC):
+    def __init__(self, query: qu.Query = None):
         """Init
         """
-        self._query = query if query is not None else _query.Query()
+        self._query = query if query is not None else qu.Query()
         self._skip = 0
         self._limit = 0
         self._sort = None
@@ -155,21 +155,21 @@ class Finder(_ABC):
         self._no_cache_fields = []
 
     @property
-    def query(self) -> _query.Query():
+    def query(self) -> qu.Query:
         return self._query
 
     @property
     def id(self) -> str:
         """Get unique finder's ID to use as a cache key, etc
         """
-        q = _deepcopy(self._query)
+        q = deepcopy(self._query)
         for f in self._no_cache_fields:
             q.rm_field(f)
 
-        return _util.md5_hex_digest('{}{}{}{}'.format(q, self._skip, self._limit, self._sort))
+        return util.md5_hex_digest('{}{}{}{}'.format(q, self._skip, self._limit, self._sort))
 
     @property
-    def result_processor(self) -> _Optional[_Callable[[_model.Entity], _model.Entity]]:
+    def result_processor(self) -> Optional[Callable[[_model.Entity], _model.Entity]]:
         return self._result_processor
 
     @result_processor.setter
@@ -210,7 +210,7 @@ class Finder(_ABC):
 
         return self
 
-    def add(self, op: _query.Operator):
+    def add(self, op: qu.Operator):
         """Add a query operator
         """
         self._query.add(op)
@@ -220,111 +220,111 @@ class Finder(_ABC):
     def rm(self, field: str):
         """Remove all operator that use specified field
         """
-        self.query.rm_field(field)
+        self._query.rm_field(field)
 
         return self
 
     def eq(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Eq(field, arg)))
+        return self.add(qu.And(qu.Eq(field, arg)))
 
     def gt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Gt(field, arg)))
+        return self.add(qu.And(qu.Gt(field, arg)))
 
     def gte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Gte(field, arg)))
+        return self.add(qu.And(qu.Gte(field, arg)))
 
     def lt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Lt(field, arg)))
+        return self.add(qu.And(qu.Lt(field, arg)))
 
     def lte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Lte(field, arg)))
+        return self.add(qu.And(qu.Lte(field, arg)))
 
     def ne(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Ne(field, arg)))
+        return self.add(qu.And(qu.Ne(field, arg)))
 
     def inc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.In(field, arg)))
+        return self.add(qu.And(qu.In(field, arg)))
 
     def ninc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.And(_query.Nin(field, arg)))
+        return self.add(qu.And(qu.Nin(field, arg)))
 
     def regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
               dot_all: bool = False, verbose: bool = False):
         """Shortcut
         """
-        return self.add(_query.And(_query.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
+        return self.add(qu.And(qu.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
 
     def or_eq(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Eq(field, arg)))
+        return self.add(qu.Or(qu.Eq(field, arg)))
 
     def or_gt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Gt(field, arg)))
+        return self.add(qu.Or(qu.Gt(field, arg)))
 
     def or_gte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Gte(field, arg)))
+        return self.add(qu.Or(qu.Gte(field, arg)))
 
     def or_lt(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Lt(field, arg)))
+        return self.add(qu.Or(qu.Lt(field, arg)))
 
     def or_lte(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Lte(field, arg)))
+        return self.add(qu.Or(qu.Lte(field, arg)))
 
     def or_ne(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Ne(field, arg)))
+        return self.add(qu.Or(qu.Ne(field, arg)))
 
     def or_inc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.In(field, arg)))
+        return self.add(qu.Or(qu.In(field, arg)))
 
     def or_ninc(self, field: str, arg):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Nin(field, arg)))
+        return self.add(qu.Or(qu.Nin(field, arg)))
 
     def text(self, search: str, language: str = None):
         """Shortcut
         """
-        return self.add(_query.And(_query.Text(search, language)))
+        return self.add(qu.And(qu.Text(search, language)))
 
     def or_text(self, search: str, language: str = None):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Text(search, language)))
+        return self.add(qu.Or(qu.Text(search, language)))
 
     def or_regex(self, field: str, pattern: str, case_insensitive: bool = False, multiline: bool = False,
                  dot_all: bool = False, verbose: bool = False):
         """Shortcut
         """
-        return self.add(_query.Or(_query.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
+        return self.add(qu.Or(qu.Regex(field, pattern, case_insensitive, multiline, dot_all, verbose)))
 
     def skip(self, num: int):
         """Set number of records to skip in result cursor.
@@ -333,7 +333,7 @@ class Finder(_ABC):
 
         return self
 
-    def sort(self, fields: _List[_Tuple[str, int]] = None):
+    def sort(self, fields: List[Tuple[str, int]] = None):
         """Set sort criteria
         """
         self._sort = fields
@@ -353,19 +353,19 @@ class Finder(_ABC):
 
         return self
 
-    @_abstractmethod
+    @abstractmethod
     def count(self) -> int:
         """Count entities
         """
         raise NotImplementedError()
 
-    @_abstractmethod
+    @abstractmethod
     def get(self, limit: int = 0) -> Result:
         """Get result
         """
         raise NotImplementedError()
 
-    def first(self) -> _Union[_model.Entity, None]:
+    def first(self) -> Union[_model.Entity, None]:
         """Get first result
         """
         result = list(self.get(1))
@@ -399,7 +399,7 @@ class SingleModelFinder(Finder):
     """ODM finder for querying single collection
     """
 
-    def __init__(self, model: str, query: _query.Query = None):
+    def __init__(self, model: str, query: qu.Query = None):
         """Init
         """
         if not _api.is_model_registered(model):
@@ -407,7 +407,7 @@ class SingleModelFinder(Finder):
 
         self._model = model
         self._mock = _api.dispense(model)
-        self._cache_pool = _cache.get_pool('odm.finder.' + model)
+        self._cache_pool = cache.get_pool('odm.finder.' + model)
 
         super().__init__(_odm_query.ODMQuery(self._mock, query))
 
@@ -440,13 +440,13 @@ class SingleModelFinder(Finder):
         r = []
         for v in values:
             # Transform references to entities
-            if isinstance(v, _DBRef):
+            if isinstance(v, DBRef):
                 v = get_by_ref(v)
             r.append(v)
 
         return r
 
-    def sort(self, fields: _List[_Tuple[str, int]] = None):
+    def sort(self, fields: List[Tuple[str, int]] = None):
         """Set sort criteria
         """
         if fields:
@@ -497,7 +497,7 @@ class SingleModelFinder(Finder):
             filter=query,
             skip=self._skip,
             limit=self._limit,
-            cursor_type=_CursorType.NON_TAILABLE,
+            cursor_type=CursorType.NON_TAILABLE,
             sort=self._sort,
         )
 
@@ -511,14 +511,14 @@ class MultiModelFinder(Finder):
     """ODM finder for querying multiple collections
     """
 
-    def __init__(self, models: _List[str], query: _query.Query = None):
+    def __init__(self, models: List[str], query: qu.Query = None):
         """Init
         """
         super().__init__(query)
 
         self._finders = [SingleModelFinder(model, query) for model in models]
 
-    def add(self, op: _query.Operator):
+    def add(self, op: qu.Operator):
         """Add a query criteria
         """
         # Add operator to every finder

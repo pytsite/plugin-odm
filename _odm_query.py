@@ -4,17 +4,17 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Union as _Union, Iterator as _Iterator
-from bson import ObjectId as _ObjectId
-from plugins import query as _query
+from typing import Union, Iterator
+from bson import ObjectId
+from plugins import query as qu
 from . import _model
 
 
-class ODMQuery(_query.Query):
+class ODMQuery(qu.Query):
     """Query
     """
 
-    def __init__(self, entity_mock: _model.Entity, ops: _Union[_query.Operator, _Iterator[_query.Operator]] = None):
+    def __init__(self, entity_mock: _model.Entity, ops: Union[qu.Operator, Iterator[qu.Operator]] = None):
         """Init
         """
         # Mock entity to determine field types, etc
@@ -23,11 +23,11 @@ class ODMQuery(_query.Query):
         super().__init__(ops)
 
     @classmethod
-    def _sanitize_object_ids(cls, ids: _Union[str, list, tuple]) -> _Union[_ObjectId, list]:
-        if isinstance(ids, _ObjectId):
+    def _sanitize_object_ids(cls, ids: Union[str, list, tuple]) -> Union[ObjectId, list]:
+        if isinstance(ids, ObjectId):
             return ids
         elif isinstance(ids, str):
-            return _ObjectId(ids)
+            return ObjectId(ids)
         elif isinstance(ids, (list, tuple)):
             clean_arg = []
             for i in ids:
@@ -37,13 +37,13 @@ class ODMQuery(_query.Query):
         else:
             TypeError('{} cannot be converted to object id(s).'.format(type(ids)))
 
-    def _sanitize_operator(self, op: _query.Operator):
-        if isinstance(op, _query.LogicalOperator):
+    def _sanitize_operator(self, op: qu.Operator):
+        if isinstance(op, qu.LogicalOperator):
             for sub_op in op:
                 self._sanitize_operator(sub_op)
 
         # It is possible to perform checks only for top-level fields
-        elif isinstance(op, _query.ComparisonOperator) and op.field.find('.') < 0:
+        elif isinstance(op, qu.ComparisonOperator) and op.field.find('.') < 0:
             if op.field == '_id':
                 op.arg = self._sanitize_object_ids(op.arg)
             else:
@@ -52,5 +52,5 @@ class ODMQuery(_query.Query):
 
         return op
 
-    def add(self, op: _query.Operator) -> _query.Operator:
+    def add(self, op: qu.Operator) -> qu.Operator:
         return super().add(self._sanitize_operator(op))

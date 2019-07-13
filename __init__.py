@@ -4,7 +4,9 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from pytsite import semver as _semver, cache as _cache
+# Locally needed imports
+from semaver import Version as _Version
+from pytsite import cache as _cache
 
 # This cache pool MUST be created before any imports
 _cache.create_pool('odm.entities')
@@ -30,7 +32,7 @@ def plugin_load():
     events.listen('pytsite.mongodb@restore', _eh.db_restore)
 
 
-def plugin_update(v_from: _semver.Version):
+def plugin_update(v_from: _Version):
     from pytsite import console
 
     if v_from < '1.4':

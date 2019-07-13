@@ -4,9 +4,9 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import List as _List, Dict as _Dict, Union as _Union
-from pymongo.command_cursor import CommandCursor as _CommandCursor
-from plugins import query as _query
+from typing import List, Dict, Union
+from pymongo.command_cursor import CommandCursor
+from plugins import query
 from . import _api, _odm_query, _model
 
 
@@ -41,7 +41,7 @@ class Aggregator:
         """
         return self._pipeline
 
-    def match(self, op: _query.Operator):
+    def match(self, op: query.Operator):
         """Add a match stage
 
         https://docs.mongodb.com/manual/reference/operator/aggregation/match/
@@ -73,7 +73,7 @@ class Aggregator:
 
         return self
 
-    def sort(self, fields: _Dict[str, _Union[int, _Dict[str, str]]]):
+    def sort(self, fields: Dict[str, Union[int, Dict[str, str]]]):
         """Add a sort stage
 
         https://docs.mongodb.com/manual/reference/operator/aggregation/sort/
@@ -91,12 +91,12 @@ class Aggregator:
 
         return self
 
-    def _compile(self) -> _List[_Dict]:
+    def _compile(self) -> List[Dict]:
         """Compile pipeline expression
         """
         return [{stage[0]: stage[1]} for stage in self._pipeline]
 
-    def get(self) -> _CommandCursor:
+    def get(self) -> CommandCursor:
         """Perform aggregation operation and get cursor
         """
         return self._mock.collection.aggregate(self._compile())

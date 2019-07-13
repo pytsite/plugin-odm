@@ -4,15 +4,14 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Any as _Any, Union as _Union, List as _List, Optional as _Optional, Iterable as _Iterable, \
-    Type as _Type, Tuple as _Tuple
-from inspect import isclass as _isclass
-from datetime import datetime as _datetime
-from decimal import Decimal as _Decimal
-from copy import deepcopy as _deepcopy
-from bson.objectid import ObjectId as _ObjectId
-from frozendict import frozendict as _frozendict
-from pytsite import lang as _lang, util as _util, validation as _validation, formatters as _formatters
+from typing import Any, Union, List as Lst, Optional, Iterable, Type, Tuple
+from inspect import isclass
+from datetime import datetime
+from decimal import Decimal as Dec
+from copy import deepcopy
+from bson.objectid import ObjectId as BSONObjectId
+from frozendict import frozendict
+from pytsite import lang, util, validation, formatters
 
 
 class Base:
@@ -62,7 +61,7 @@ class Base:
         return self._name
 
     @property
-    def default(self) -> _Any:
+    def default(self) -> Any:
         """Get default value of the field
         """
         return self._default
@@ -103,17 +102,17 @@ class Base:
         if self._default is not None:
             self.rst_val(update_state=False)
 
-    def set_storable_val(self, value: _Any):
+    def set_storable_val(self, value: Any):
         """Must be used to set value which can be safely stored directly to the database
         """
         self._value = value
 
-    def get_storable_val(self) -> _Any:
+    def get_storable_val(self) -> Any:
         """Get value of the field which can be safely saved in the storage
         """
         return self._value
 
-    def get_storable_prev_val(self) -> _Any:
+    def get_storable_prev_val(self) -> Any:
         """Get previous value of the field which can be safely saved in the storage
         """
         return self._prev_value
@@ -123,22 +122,22 @@ class Base:
         """
         return value
 
-    def get_val(self, **kwargs) -> _Any:
+    def get_val(self, **kwargs) -> Any:
         """Get value of the field
         """
         return self._on_get(self._value, **kwargs)
 
-    def get_prev_val(self, **kwargs) -> _Any:
+    def get_prev_val(self, **kwargs) -> Any:
         """Get previous value of the field
         """
         return self._on_get(self._prev_value, **kwargs)
 
-    def _on_get_jsonable(self, value, **kwargs) -> _Any:
+    def _on_get_jsonable(self, value, **kwargs) -> Any:
         """Hook
         """
         return value
 
-    def as_jsonable(self, **kwargs) -> _Any:
+    def as_jsonable(self, **kwargs) -> Any:
         """Get JSONable representation of field's value
         """
         return self._on_get_jsonable(self._value, **kwargs)
@@ -170,7 +169,7 @@ class Base:
     def rst_val(self, **kwargs):
         """Reset field's value to default
         """
-        return self.set_val(self._on_rst(_deepcopy(self._default), **kwargs), reset=True, **kwargs)
+        return self.set_val(self._on_rst(deepcopy(self._default), **kwargs), reset=True, **kwargs)
 
     def _on_add(self, current_value, raw_value_to_add, **kwargs):
         """Hook, called by self.add_val(), must return external value representation
@@ -249,10 +248,10 @@ class ObjectId(Base):
     """ObjectID Field
     """
 
-    def _on_set(self, raw_value: _Optional[_ObjectId], **kwargs):
+    def _on_set(self, raw_value: Optional[BSONObjectId], **kwargs):
         """Hook
         """
-        if not (raw_value is None or isinstance(raw_value, _ObjectId)):
+        if not (raw_value is None or isinstance(raw_value, BSONObjectId)):
             raise TypeError('ObjectId expected, not {}'.format(type(raw_value)))
 
         return raw_value
@@ -265,15 +264,15 @@ class Ref(Base):
     def __init__(self, name: str, **kwargs):
         """Init
         """
-        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
-        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+        self._model = kwargs.get('model', ())  # type: Tuple[str, ...]
+        self._model_cls = kwargs.get('model_cls', ())  # type: Tuple[Type, ...]
 
         if isinstance(self._model, str):
             self._model = (self._model,)
         elif not isinstance(self._model, tuple):
             self._model = tuple(self._model)
 
-        if _isclass(self._model_cls):
+        if isclass(self._model_cls):
             self._model_cls = (self._model_cls,)
         elif not isinstance(self._model, tuple):
             self._model_cls = tuple(self._model_cls)
@@ -281,18 +280,18 @@ class Ref(Base):
         super().__init__(name, **kwargs)
 
     @property
-    def model(self) -> _Tuple[str]:
+    def model(self) -> Tuple[str]:
         """Get model
         """
         return self._model
 
     @property
-    def model_cls(self) -> _Tuple[_Type]:
+    def model_cls(self) -> Tuple[Type]:
         """Get model class
         """
         return self._model_cls
 
-    def _on_set(self, raw_value, **kwargs) -> _Optional[str]:
+    def _on_set(self, raw_value, **kwargs) -> Optional[str]:
         """Hook
         """
         if not raw_value:
@@ -319,10 +318,10 @@ class Ref(Base):
 
         return entity.ref
 
-    def _on_get(self, value: _Optional[str], **kwargs):
+    def _on_get(self, value: Optional[str], **kwargs):
         """Hook
 
-        :rtype: _Optional[Entity]
+        :rtype: Optional[Entity]
         """
         if value is None:
             return None
@@ -376,7 +375,7 @@ class Bool(Base):
     def sanitize_finder_arg(self, arg) -> bool:
         """Hook used for sanitizing Finder's query argument
         """
-        return _formatters.Bool().format(arg)
+        return formatters.Bool().format(arg)
 
 
 class Integer(Base):
@@ -384,7 +383,7 @@ class Integer(Base):
     """
 
     @property
-    def minimum(self) -> _Optional[int]:
+    def minimum(self) -> Optional[int]:
         return self._minimum
 
     @minimum.setter
@@ -392,7 +391,7 @@ class Integer(Base):
         self._minimum = value
 
     @property
-    def maximum(self) -> _Optional[int]:
+    def maximum(self) -> Optional[int]:
         return self._maximum
 
     @maximum.setter
@@ -447,7 +446,7 @@ class Integer(Base):
         """
         return 1
 
-    def sanitize_finder_arg(self, arg) -> _Union[int, _List[int]]:
+    def sanitize_finder_arg(self, arg) -> Union[int, Lst[int]]:
         """Hook used for sanitizing Finder's query argument
         """
         if isinstance(arg, (set, list, tuple, dict)):
@@ -461,7 +460,7 @@ class Decimal(Base):
     """
 
     @property
-    def minimum(self) -> _Optional[int]:
+    def minimum(self) -> Optional[int]:
         return self._minimum
 
     @minimum.setter
@@ -469,7 +468,7 @@ class Decimal(Base):
         self._minimum = value
 
     @property
-    def maximum(self) -> _Optional[int]:
+    def maximum(self) -> Optional[int]:
         return self._maximum
 
     @maximum.setter
@@ -477,7 +476,7 @@ class Decimal(Base):
         self._maximum = value
 
     @property
-    def round(self) -> _Optional[int]:
+    def round(self) -> Optional[int]:
         return self._round
 
     @round.setter
@@ -514,10 +513,10 @@ class Decimal(Base):
 
         super().__init__(name, **kwargs)
 
-    def _on_get(self, value: float, **kwargs) -> _Decimal:
+    def _on_get(self, value: float, **kwargs) -> Dec:
         """Get value of the field
         """
-        return _Decimal(value)
+        return Dec(value)
 
     def _on_set(self, raw_value, **kwargs) -> float:
         """Set value of the field.
@@ -545,27 +544,27 @@ class Decimal(Base):
 
         return raw_value
 
-    def _on_add(self, current_value: _Decimal, raw_value_to_add, **kwargs) -> _Decimal:
+    def _on_add(self, current_value: Dec, raw_value_to_add, **kwargs) -> Dec:
         """
         :type raw_value_to_add: _Decimal | float | integer | str
         """
         try:
-            return current_value + _Decimal(raw_value_to_add)
+            return current_value + Dec(raw_value_to_add)
         except ValueError:
             raise TypeError("'{}' cannot be used as a value of the field '{}'"
                             .format(type(raw_value_to_add), self.name))
 
-    def _on_sub(self, current_value: _Decimal, raw_value_to_sub, **kwargs) -> _Decimal:
+    def _on_sub(self, current_value: Dec, raw_value_to_sub, **kwargs) -> Dec:
         """
         :type value: _Decimal | float | integer | str
         """
         try:
-            return current_value - _Decimal(raw_value_to_sub)
+            return current_value - Dec(raw_value_to_sub)
         except ValueError:
             raise TypeError("'{}' cannot be used as a value of the field '{}'"
                             .format(type(raw_value_to_sub), self.name))
 
-    def sanitize_finder_arg(self, arg) -> _Union[float, _List[float]]:
+    def sanitize_finder_arg(self, arg) -> Union[float, Lst[float]]:
         """Hook used for sanitizing Finder's query argument
         """
         if isinstance(arg, (set, list, tuple, dict)):
@@ -665,23 +664,23 @@ class String(Base):
         if raw_value:
             # Strip HTML
             if self._strip_html:
-                raw_value = _util.strip_html_tags(raw_value)
+                raw_value = util.strip_html_tags(raw_value)
 
             # Tidyfy HTML
             elif self._tidyfy_html:
-                raw_value = _util.tidyfy_html(raw_value, self._remove_empty_html_tags)
+                raw_value = util.tidyfy_html(raw_value, self._remove_empty_html_tags)
 
         # Checks lengths
         if not kwargs.get('reset'):
             if self._min_length:
                 v_msg_id = 'odm@validation_field_string_min_length'
                 v_msg_args = {'field': self.name}
-                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
+                validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, min_length=self._min_length).validate()
 
             if self._max_length:
                 v_msg_id = 'odm@validation_field_string_max_length'
                 v_msg_args = {'field': self.name}
-                _validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
+                validation.rule.MinLength(raw_value, v_msg_id, v_msg_args, max_length=self._max_length).validate()
 
         return raw_value
 
@@ -690,13 +689,13 @@ class DateTime(Base):
     """Datetime Field
     """
 
-    def _on_set(self, raw_value: _Optional[_datetime], **kwargs) -> _Optional[_datetime]:
+    def _on_set(self, raw_value: Optional[datetime], **kwargs) -> Optional[datetime]:
         """Set field's value
         """
         if not raw_value:
             return None
 
-        if not isinstance(raw_value, _datetime):
+        if not isinstance(raw_value, datetime):
             raise TypeError("DateTime expected, not '{}'".format(type(raw_value)))
 
         if raw_value.tzinfo:
@@ -704,24 +703,24 @@ class DateTime(Base):
 
         return raw_value
 
-    def _on_get(self, value: _datetime, **kwargs) -> _Union[_datetime, str]:
+    def _on_get(self, value: datetime, **kwargs) -> Union[datetime, str]:
         """Get field's value
         """
         fmt = kwargs.get('fmt')
         if value and fmt:
             if fmt == 'ago':
-                value = _lang.time_ago(value)
+                value = lang.time_ago(value)
             elif fmt == 'pretty_date':
-                value = _lang.pretty_date(value)
+                value = lang.pretty_date(value)
             elif fmt == 'pretty_date_time':
-                value = _lang.pretty_date_time(value)
+                value = lang.pretty_date_time(value)
             else:
                 value = value.strftime(fmt)
 
         return value
 
     def _on_get_jsonable(self, value, **kwargs):
-        return _util.w3c_datetime_str(value)
+        return util.w3c_datetime_str(value)
 
 
 class List(Base):
@@ -789,7 +788,7 @@ class List(Base):
 
         # Cleaning up empty string values
         if self._cleanup:
-            raw_value = _util.cleanup_list(raw_value)
+            raw_value = util.cleanup_list(raw_value)
 
         return raw_value
 
@@ -856,7 +855,7 @@ class Dict(Base):
 
         super().__init__(name, **kwargs)
 
-    def _on_get(self, value: dict, **kwargs) -> _frozendict:
+    def _on_get(self, value: dict, **kwargs) -> frozendict:
         """Hook
         """
         if self._dotted_keys:
@@ -867,19 +866,19 @@ class Dict(Base):
             value = new_value
 
         # Don't allow to change value outside the field's object
-        return _frozendict(value)
+        return frozendict(value)
 
-    def _on_set(self, raw_value: _Union[dict, _frozendict], **kwargs) -> dict:
+    def _on_set(self, raw_value: Union[dict, frozendict], **kwargs) -> dict:
         """Hook
         """
         if raw_value is None:
             return {}
 
-        if type(raw_value) not in (dict, _frozendict):
+        if type(raw_value) not in (dict, frozendict):
             raise TypeError("Value of the field '{}' should be a dict. not '{}'.".format(self._name, type(raw_value)))
 
         # Internally this field stores ordinary dict
-        if isinstance(raw_value, _frozendict):
+        if isinstance(raw_value, frozendict):
             raw_value = dict(raw_value)
 
         if self._dotted_keys:
@@ -899,7 +898,7 @@ class Dict(Base):
 
         return raw_value
 
-    def _on_add(self, current_value: _frozendict, raw_value_to_add, **kwargs) -> dict:
+    def _on_add(self, current_value: frozendict, raw_value_to_add, **kwargs) -> dict:
         """Add a value to the field.
         """
         try:
@@ -931,7 +930,7 @@ class Enum(Base):
         return raw_value
 
     @property
-    def values(self) -> _Iterable:
+    def values(self) -> Iterable:
         return self._values
 
 
@@ -954,15 +953,15 @@ class RefsList(List):
         """
         from ._model import Entity
 
-        self._model = kwargs.get('model', ())  # type: _Tuple[str, ...]
-        self._model_cls = kwargs.get('model_cls', ())  # type: _Tuple[_Type, ...]
+        self._model = kwargs.get('model', ())  # type: Tuple[str, ...]
+        self._model_cls = kwargs.get('model_cls', ())  # type: Tuple[Type, ...]
 
         if isinstance(self._model, str):
             self._model = (self._model,)
         elif not isinstance(self._model, tuple):
             self._model = tuple(self._model)
 
-        if _isclass(self._model_cls):
+        if isclass(self._model_cls):
             self._model_cls = (self._model_cls,)
         elif not isinstance(self._model, tuple):
             self._model_cls = tuple(self._model_cls)
@@ -970,18 +969,18 @@ class RefsList(List):
         super().__init__(name, allowed_types=(Entity,), **kwargs)
 
     @property
-    def model(self) -> _Tuple[str]:
+    def model(self) -> Tuple[str]:
         """Get model
         """
         return self._model
 
     @property
-    def model_cls(self) -> _Tuple[_Type]:
+    def model_cls(self) -> Tuple[Type]:
         """Get model class
         """
         return self._model_cls
 
-    def _on_set(self, raw_value, **kwargs) -> _List[str]:
+    def _on_set(self, raw_value, **kwargs) -> Lst[str]:
         """Set value of the field
         """
         if raw_value is None:
@@ -1012,10 +1011,10 @@ class RefsList(List):
 
         return r
 
-    def _on_get(self, value: _List[str], **kwargs):
+    def _on_get(self, value: Lst[str], **kwargs):
         """Get value of the field
 
-        :rtype: _List[odm.model.Entity, ...]
+        :rtype: List[odm.model.Entity, ...]
         """
         from ._api import get_by_ref
 
@@ -1109,9 +1108,9 @@ class DecimalList(List):
     def __init__(self, name: str, **kwargs):
         """Init.
         """
-        super().__init__(name, allowed_types=(float, _Decimal), **kwargs)
+        super().__init__(name, allowed_types=(float, Dec), **kwargs)
 
-    def _on_set(self, raw_value: list, **kwargs) -> _List[float]:
+    def _on_set(self, raw_value: list, **kwargs) -> Lst[float]:
         if raw_value is None:
             return []
 
@@ -1121,10 +1120,10 @@ class DecimalList(List):
         return raw_value
 
     def _on_add(self, current_value: tuple, raw_value_to_add, **kwargs):
-        return super()._on_add(current_value, _Decimal(raw_value_to_add), **kwargs)
+        return super()._on_add(current_value, Dec(raw_value_to_add), **kwargs)
 
     def _on_sub(self, current_value: tuple, raw_value_to_sub, **kwargs):
-        return super()._on_sub(current_value, _Decimal(raw_value_to_sub), **kwargs)
+        return super()._on_sub(current_value, Dec(raw_value_to_sub), **kwargs)
 
 
 class StringList(List):
@@ -1165,4 +1164,4 @@ class Email(String):
         v_msg_id = 'odm@validation_field_email'
         v_msg_args = {'field': self.name}
 
-        return _validation.rule.Email(raw_value, v_msg_id, v_msg_args).validate()
+        return validation.rule.Email(raw_value, v_msg_id, v_msg_args).validate()

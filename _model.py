@@ -4,20 +4,20 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Any as _Any, Dict as _Dict, List as _List, Tuple as _Tuple, Union as _Union, Generator as _Generator
-from abc import ABC as _ABC, abstractmethod as _abstractmethod
-from collections import OrderedDict as _OrderedDict
-from copy import deepcopy as _deepcopy
-from datetime import datetime as _datetime
+from typing import Any, Dict, List, Tuple, Union, Generator
+from abc import ABC, abstractmethod
+from collections import OrderedDict
+from copy import deepcopy
+from datetime import datetime
 from pymongo import ASCENDING as I_ASC, DESCENDING as I_DESC, GEO2D as I_GEO2D, TEXT as I_TEXT, GEOSPHERE as I_GEOSPHERE
-from bson.objectid import ObjectId as _ObjectId
-from pymongo.collection import Collection as _Collection
-from pymongo.errors import OperationFailure as _OperationFailure
-from pytsite import mongodb as _db, events as _events, lang as _lang, errors as _errors, cache as _cache, reg as _reg
+from bson.objectid import ObjectId
+from pymongo.collection import Collection
+from pymongo.errors import OperationFailure
+from pytsite import mongodb, events, lang, errors, cache, reg
 from . import _error, _field, _queue
 
-_CACHE_POOL = _cache.get_pool('odm.entities')
-_CACHE_TTL = _reg.get('odm.cache_ttl', 86400)
+_CACHE_POOL = cache.get_pool('odm.entities')
+_CACHE_TTL = reg.get('odm.cache_ttl', 86400)
 
 _DEPRECATED_METHODS = {
     '_pre_save': '_on_pre_save',
@@ -30,11 +30,11 @@ _DEPRECATED_METHODS = {
 }
 
 
-class Entity(_ABC):
+class Entity(ABC):
     """ODM Entity
     """
     _collection_name = None
-    _history_fields = None  # type: _List[str]
+    _history_fields = None  # type: List[str]
 
     @property
     def indexes(self) -> list:
@@ -49,19 +49,19 @@ class Entity(_ABC):
         return self._has_text_index
 
     @property
-    def collection(self) -> _Collection:
+    def collection(self) -> Collection:
         """Get entity's DB collection
         """
-        return _db.get_collection(self._collection_name)
+        return mongodb.get_collection(self._collection_name)
 
     @property
-    def fields(self) -> _Dict[str, _field.Base]:
+    def fields(self) -> Dict[str, _field.Base]:
         """Get entity's fields
         """
         return self._fields
 
     @property
-    def id(self) -> _Union[_ObjectId, None]:
+    def id(self) -> Union[ObjectId, None]:
         """Get entity ID
         """
         return self.f_get('_id')
@@ -149,7 +149,7 @@ class Entity(_ABC):
         self.f_set('_depth', value)
 
     @property
-    def created(self) -> _datetime:
+    def created(self) -> datetime:
         """Get date/time when the entity was created
         """
         return self.f_get('_created')
@@ -161,7 +161,7 @@ class Entity(_ABC):
         self.f_set('_created', value)
 
     @property
-    def modified(self) -> _datetime:
+    def modified(self) -> datetime:
         """Get date/time when the entity was modified
         """
         return self.f_get('_modified')
@@ -173,12 +173,12 @@ class Entity(_ABC):
         self.f_set('_modified', value)
 
     @property
-    def history(self) -> _Generator:
+    def history(self) -> Generator:
         """Get entity change history
         """
         for row in self.f_get('_history'):
             for f_name, f_vals in row[1].items():
-                f = _deepcopy(self.get_field(f_name))
+                f = deepcopy(self.get_field(f_name))
                 row[1][f_name] = [
                     f.set_storable_val(row[1][f_name][0]).get_val(),
                     f.set_storable_val(row[1][f_name][1]).get_val(),
@@ -253,7 +253,7 @@ class Entity(_ABC):
         for super_cls in cls.__mro__:
             if hasattr(super_cls, 'package_name') and callable(super_cls.package_name):
                 full_msg_id = super_cls.package_name() + '@' + partial_msg_id
-                if _lang.is_translation_defined(full_msg_id):
+                if lang.is_translation_defined(full_msg_id):
                     return full_msg_id
 
         return cls.lang_package_name() + '@' + partial_msg_id
@@ -262,13 +262,13 @@ class Entity(_ABC):
     def t(cls, partial_msg_id: str, args: dict = None) -> str:
         """Translate a string in model context
         """
-        return _lang.t(cls.resolve_lang_msg_id(partial_msg_id), args)
+        return lang.t(cls.resolve_lang_msg_id(partial_msg_id), args)
 
     @classmethod
     def t_plural(cls, partial_msg_id: str, num: int = 2) -> str:
         """Translate a string into plural form
         """
-        return _lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
+        return lang.t_plural(cls.resolve_lang_msg_id(partial_msg_id), num)
 
     def __str__(self) -> str:
         """__str__()
@@ -285,12 +285,12 @@ class Entity(_ABC):
         """
         return hasattr(other, 'ref') and self.ref == other.ref
 
-    def __init__(self, model: str, obj_id: _Union[str, _ObjectId, None] = None):
+    def __init__(self, model: str, obj_id: Union[str, ObjectId, None] = None):
         """Init
         """
         # Define collection name if it wasn't specified
         if not self._collection_name:
-            self._collection_name = _lang.english_plural(model)
+            self._collection_name = lang.english_plural(model)
 
         self._model = model
         self._is_new = True
@@ -302,7 +302,7 @@ class Entity(_ABC):
         self._has_text_index = False
         self._pending_children = []
 
-        self._fields = _OrderedDict()  # type: _Dict[str, _field.Base]
+        self._fields = OrderedDict()  # type: Dict[str, _field.Base]
 
         # Define 'system' fields
         self.define_field(_field.ObjectId('_id', is_required=True))
@@ -310,8 +310,8 @@ class Entity(_ABC):
         self.define_field(_field.String('_model', is_required=True, default=self._model))
         self.define_field(_field.Ref('_parent', model=model))
         self.define_field(_field.Integer('_depth'))
-        self.define_field(_field.DateTime('_created', default=_datetime.now()))
-        self.define_field(_field.DateTime('_modified', default=_datetime.now()))
+        self.define_field(_field.DateTime('_created', default=datetime.now()))
+        self.define_field(_field.DateTime('_modified', default=datetime.now()))
 
         # Define field to store changes of other fields
         if self._history_fields:
@@ -319,8 +319,8 @@ class Entity(_ABC):
 
         # Setup fields
         self._setup_fields()
-        _events.fire('odm@model.setup_fields', entity=self)
-        _events.fire('odm@model.setup_fields.{}'.format(model), entity=self)
+        events.fire('odm@model.setup_fields', entity=self)
+        events.fire('odm@model.setup_fields.{}'.format(model), entity=self)
 
         # Delegate indexes setup process to the hook method
         self.define_index([('_ref', I_ASC)])
@@ -328,14 +328,14 @@ class Entity(_ABC):
         self.define_index([('_created', I_ASC)])
         self.define_index([('_modified', I_ASC)])
         self._setup_indexes()
-        _events.fire('odm@model.setup_indexes', entity=self)
-        _events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
+        events.fire('odm@model.setup_indexes', entity=self)
+        events.fire('odm@model.setup_indexes.{}'.format(model), entity=self)
 
         # Load fields data from database or cache
         if obj_id:
-            self._load_fields_data(_ObjectId(obj_id) if isinstance(obj_id, str) else obj_id)
+            self._load_fields_data(ObjectId(obj_id) if isinstance(obj_id, str) else obj_id)
 
-    def _load_fields_data(self, eid: _ObjectId):
+    def _load_fields_data(self, eid: ObjectId):
         """Load fields data from the database
         """
         cache_key = '{}.{}'.format(self._model, eid)
@@ -345,7 +345,7 @@ class Entity(_ABC):
             data = _CACHE_POOL.get_hash(cache_key)
 
         # Get entity data from database
-        except _cache.error.KeyNotExist:
+        except cache.error.KeyNotExist:
             data = self.collection.find_one({'_id': eid})
             if not data:
                 raise _error.EntityNotFound(self._model, str(eid))
@@ -376,7 +376,7 @@ class Entity(_ABC):
         self._is_new = False
         self._is_modified = False
 
-    def define_index(self, definition: _List[_Tuple], unique: bool = False, name: str = None):
+    def define_index(self, definition: List[Tuple], unique: bool = False, name: str = None):
         """Define an index(es)
         """
         opts = {
@@ -451,12 +451,12 @@ class Entity(_ABC):
             for i_name, i_val in indices.items():
                 if i_name != '_id_':
                     self.collection.drop_index(i_name)
-        except _OperationFailure:  # Collection does not exist in database
+        except OperationFailure:  # Collection does not exist in database
             pass
 
         self.create_indexes()
 
-    @_abstractmethod
+    @abstractmethod
     def _setup_fields(self):
         """Hook
         """
@@ -531,7 +531,7 @@ class Entity(_ABC):
         """
         return value
 
-    def _on_f_modified(self, field_name: str, prev_value: _Any, value: _Any):
+    def _on_f_modified(self, field_name: str, prev_value: Any, value: Any):
         """On modify field's value hook
         """
         pass
@@ -546,7 +546,7 @@ class Entity(_ABC):
         """
         return self._on_f_get(field_name, self.get_field(field_name).get_val(**kwargs), **kwargs)
 
-    def f_get_prev(self, field_name: str, **kwargs) -> _Any:
+    def f_get_prev(self, field_name: str, **kwargs) -> Any:
         """Get field's previous value
         """
         return self._on_f_get(field_name, self.get_field(field_name).get_prev_val(**kwargs), **kwargs)
@@ -554,7 +554,7 @@ class Entity(_ABC):
     def f_history_get(self, field_name: str):
         """Get history of the field's value changes
         """
-        f = _deepcopy(self.get_field(field_name))
+        f = deepcopy(self.get_field(field_name))
 
         r = []
         for row in self.f_get('_history'):
@@ -597,7 +597,7 @@ class Entity(_ABC):
 
         return self
 
-    def _on_f_sub(self, field_name: str, value, **kwargs) -> _Any:
+    def _on_f_sub(self, field_name: str, value, **kwargs) -> Any:
         """On field's subtract value hook
         """
         return value
@@ -744,11 +744,11 @@ class Entity(_ABC):
 
         # Update timestamp
         if kwargs.get('update_timestamp', True):
-            self.f_set('_modified', _datetime.now())
+            self.f_set('_modified', datetime.now())
 
         if self._is_new:
             # Create object's ID
-            oid = _ObjectId()
+            oid = ObjectId()
             self.f_set('_id', oid)
             self.f_set('_ref', '{}:{}'.format(self.model, oid))
 
@@ -766,11 +766,11 @@ class Entity(_ABC):
                         history[f.name] = [f.get_storable_prev_val(), f.get_storable_val()]
 
             if history:
-                self.f_add('_history', [_datetime.now(), history])
+                self.f_add('_history', [datetime.now(), history])
 
             self._on_pre_save()
-            _events.fire('odm@entity.pre_save', entity=self)
-            _events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
+            events.fire('odm@entity.pre_save', entity=self)
+            events.fire('odm@entity.pre_save.{}'.format(self._model), entity=self)
 
         # Save into storage
         _queue.put('entity_save', {
@@ -790,8 +790,8 @@ class Entity(_ABC):
         if kwargs.get('after_hooks', True):
             self._on_after_save(first_save, **kwargs)
             self._on_created(**kwargs) if first_save else self._on_modified(**kwargs)
-            _events.fire('odm@entity.save', entity=self, first_save=first_save)
-            _events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
+            events.fire('odm@entity.save', entity=self, first_save=first_save)
+            events.fire('odm@entity.save.{}'.format(self._model), entity=self, first_save=first_save)
 
         # Mark entity as saved and is not modified
         self._is_being_saved = False
@@ -835,13 +835,13 @@ class Entity(_ABC):
         from . import _api
 
         if self._is_new:
-            raise _errors.ForbidDeletion('Non stored entities cannot be deleted')
+            raise errors.ForbidDeletion('Non stored entities cannot be deleted')
 
         self._check_is_not_deleted()
 
         # Pre delete events and hook
-        _events.fire('odm@entity.pre_delete', entity=self)
-        _events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
+        events.fire('odm@entity.pre_delete', entity=self)
+        events.fire('odm@entity.pre_delete.{}'.format(self._model), entity=self)
         self._on_pre_delete(**kwargs)
 
         # Search for entities that refers to this entity
@@ -866,7 +866,7 @@ class Entity(_ABC):
 
                     e = f.first()
                     if e:
-                        raise _errors.ForbidDeletion("{}.{} refers to the {}".format(e, field.name, self))
+                        raise errors.ForbidDeletion("{}.{} refers to the {}".format(e, field.name, self))
 
         # Flag that deletion is in progress
         self._is_being_deleted = True
@@ -892,8 +892,8 @@ class Entity(_ABC):
         # After delete events and hook. It is important to call them BEFORE entity entity data will be
         # completely removed from the cache
         self._on_after_delete(**kwargs)
-        _events.fire('odm@entity.delete', entity=self)
-        _events.fire('odm@entity.delete.{}'.format(self._model), entity=self)
+        events.fire('odm@entity.delete', entity=self)
+        events.fire('odm@entity.delete.{}'.format(self._model), entity=self)
 
         self._is_deleted = True
         self._is_being_deleted = False
@@ -928,7 +928,7 @@ class Entity(_ABC):
 
         return r
 
-    def as_jsonable(self, **kwargs) -> _Dict:
+    def as_jsonable(self, **kwargs) -> Dict:
         """Get JSONable dictionary representation of the entity
         """
         return {'ref': self.ref}

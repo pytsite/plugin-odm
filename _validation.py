@@ -1,16 +1,15 @@
 """PytSite ODM PLugin Validation Rules
 """
-
-from bson.objectid import ObjectId as _ObjectId
-from pytsite import validation as _pytsite_validation
-from . import _api, _model
-
 __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
+from bson.objectid import ObjectId
+from pytsite import validation
+from . import _api, _model
 
-class ODMEntitiesList(_pytsite_validation.rule.Rule):
+
+class ODMEntitiesList(validation.rule.Rule):
     """Check if the value is a list of references to entities.
     """
 
@@ -32,14 +31,14 @@ class ODMEntitiesList(_pytsite_validation.rule.Rule):
         for v in self._value:
             if not isinstance(v, _model.Entity):
                 m_args = dict(self._msg_args, detail='Instance of ODMModel expected.')
-                raise _pytsite_validation.error.RuleError(self._msg_id, m_args)
+                raise validation.error.RuleError(self._msg_id, m_args)
             if self._model and v.model != self._model:
                 m_args = dict(self._msg_args, detail="Instance of '{}' model expected, but '{}' given.".
                               format(self._model, v.model))
-                raise _pytsite_validation.error.RuleError(self._msg_id, m_args)
+                raise validation.error.RuleError(self._msg_id, m_args)
 
 
-class FieldUnique(_pytsite_validation.rule.Rule):
+class FieldUnique(validation.rule.Rule):
     def __init__(self, value=None, msg_id: str = None, msg_args: dict = None, **kwargs):
         """Init.
 
@@ -59,7 +58,7 @@ class FieldUnique(_pytsite_validation.rule.Rule):
             raise RuntimeError("'field' argument is required")
 
         self._exclude_ids = kwargs.get('exclude_ids', ())
-        if type(self._exclude_ids) in (str, _ObjectId):
+        if type(self._exclude_ids) in (str, ObjectId):
             self._exclude_ids = (self._exclude_ids,)
 
         self._msg_args.update({'field': self._field})
@@ -77,4 +76,4 @@ class FieldUnique(_pytsite_validation.rule.Rule):
             f.ninc('_id', self._exclude_ids)
 
         if f.count():
-            raise _pytsite_validation.error.RuleError(self._msg_id, self._msg_args)
+            raise validation.error.RuleError(self._msg_id, self._msg_args)

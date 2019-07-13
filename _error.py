@@ -4,7 +4,7 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from pytsite import errors as _errors
+from pytsite import errors
 
 
 class Error(Exception):
@@ -57,7 +57,7 @@ class InvalidReference(Error):
         return "Invalid reference: {}".format(self._ref)
 
 
-class EntityNotFound(Error, _errors.NotFound):
+class EntityNotFound(Error, errors.NotFound):
     """Entity is not found exception
     """
 

@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 6.8 (2019-07-13)
+
+Support of `pytsite-9.0`.
+
+
 ### 6.7 (2019-05-10)
 
 - New method `field.Base.set_storable_val()` added.
