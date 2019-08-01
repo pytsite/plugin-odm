@@ -19,22 +19,21 @@ from . import _error, _field, _queue
 _CACHE_POOL = cache.get_pool('odm.entities')
 _CACHE_TTL = reg.get('odm.cache_ttl', 86400)
 
-_DEPRECATED_METHODS = {
-    '_pre_save': '_on_pre_save',
-    '_after_save': '_on_after_save',
-    '_pre_delete': '_on_after_delete',
-    '_after_delete': '_on_after_delete',
-    '_created': '_on_created',
-    '_modified': '_on_modified',
-    '_deleted': '_on_after_delete',
-}
-
 
 class Entity(ABC):
     """ODM Entity
     """
     _collection_name = None
     _history_fields = None  # type: List[str]
+    _deprecated_methods = {
+        '_pre_save': '_on_pre_save',
+        '_after_save': '_on_after_save',
+        '_pre_delete': '_on_after_delete',
+        '_after_delete': '_on_after_delete',
+        '_created': '_on_created',
+        '_modified': '_on_modified',
+        '_deleted': '_on_after_delete',
+    }
 
     @property
     def indexes(self) -> list:
@@ -224,7 +223,7 @@ class Entity(ABC):
 
     @classmethod
     def _check_deprecated_methods(cls):
-        for method, replacement in _DEPRECATED_METHODS.items():
+        for method, replacement in cls._deprecated_methods.items():
             if hasattr(cls, method):
                 raise DeprecationWarning('{}() is deprecated. Use {}() method instead.'.format(method, replacement))
 

@@ -4,6 +4,12 @@
 ## Changelog
 
 
+### 6.9 (2019-08-01)
+
+New property `Entity._deprecated_methods` added to reduce efforts when defining
+deprecated methods.
+
+
 ### 6.8 (2019-07-13)
 
 Support of `pytsite-9.0`.
